@@ -15,7 +15,7 @@ with st.form("content_form"):
         content_type = st.selectbox("Content Type", ["Informational Post", "Promotional / Ad", "Storytelling"])
     with col2:
         tone = st.selectbox("Tone", ["Professional", "Casual & Friendly", "Persuasive", "Inspirational"])
-        target_audience = st.text_input("Target Audience", placeholder="e.g., Software Engineers")
+        target_audience = st.text_input("Target Audience", placeholder="e.g., Students, Entrepreneurs")
     
     topic = st.text_area("Topic / Core Message", placeholder="What do you want to talk about?")
     submit_btn = st.form_submit_button("Generate Content")
@@ -28,6 +28,8 @@ if submit_btn:
     else:
         try:
             genai.configure(api_key=api_key)
+            
+            # Use exact stable model endpoint
             model = genai.GenerativeModel("gemini-2.0-flash")
             
             prompt = f"Platform: {platform}\nType: {content_type}\nTone: {tone}\nAudience: {target_audience}\nTopic: {topic}"
