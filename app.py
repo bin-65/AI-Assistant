@@ -30,7 +30,7 @@ if submit_btn:
             genai.configure(api_key=api_key)
             
             # Use exact stable model endpoint
-            model = genai.GenerativeModel("gemini-2.0-flash")
+            model = genai.GenerativeModel("gemini-3.6-flash")
             
             prompt = f"Platform: {platform}\nType: {content_type}\nTone: {tone}\nAudience: {target_audience}\nTopic: {topic}"
             
