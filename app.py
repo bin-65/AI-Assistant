@@ -1,5 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
+from PIL import Image
 import urllib.parse
 
 # Page configuration
@@ -16,8 +17,14 @@ else:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel("gemini-3.6-flash")
 
-    # Creating Three Tabs
-    tab1, tab2, tab3 = st.tabs(["✍️ Content Assistant", "🌐 Multi-Language Translator", "🎨 AI Image Generator"])
+    # Creating Five Tabs
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "✍️ Content Assistant", 
+        "🌐 Translator", 
+        "🎨 Image Generator", 
+        "⚡ Smart AI Workspace",
+        "📚 Assignment & Essay Writer"
+    ])
 
     # ---------------- TAB 1: CONTENT ASSISTANT ----------------
     with tab1:
@@ -50,7 +57,7 @@ else:
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # ---------------- TAB 2: MULTI-LANGUAGE TRANSLATOR (50 LANGUAGES) ----------------
+    # ---------------- TAB 2: MULTI-LANGUAGE TRANSLATOR ----------------
     with tab2:
         st.subheader("Multi-Language Translator")
         st.write("Select a target language from the top 50 global languages.")
@@ -111,21 +118,138 @@ else:
             else:
                 try:
                     with st.spinner("Creating image..."):
-                        # Build detailed prompt
                         full_prompt = f"{img_prompt}, positive vibes, high quality, {image_style} style"
                         encoded_prompt = urllib.parse.quote(full_prompt)
                         
-                        # Set dimensions based on ratio
                         width, height = 1024, 1024
                         if aspect_ratio == "Landscape (16:9)":
                             width, height = 1280, 720
                         elif aspect_ratio == "Portrait (9:16)":
                             width, height = 720, 1280
                         
-                        # Generate Image URL via Pollinations AI
                         image_url = f"https://pollinations.ai/p/{encoded_prompt}?width={width}&height={height}&seed=42&model=flux"
-                        
                         st.image(image_url, caption=f"Generated Image: {img_prompt}", use_container_width=True)
                         st.success("Image Generated Successfully!")
                 except Exception as e:
                     st.error(f"Error generating image: {e}")
+
+    # ---------------- TAB 4: SMART AI WORKSPACE (UNLIMITED MULTI-FILES + VOICE) ----------------
+    with tab4:
+        st.subheader("⚡ Smart AI Workspace (Multi-File & Voice)")
+        st.write("Upload multiple images/text files with no limit and ask questions via text or voice.")
+
+        # Voice Input UI
+        st.markdown("""
+        <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+            <p style="margin: 0 0 10px 0; font-weight: bold; color: #1E1E1E;">🎤 Voice Input (Microphone):</p>
+            <button id="start-btn" onclick="startConverting()" style="background-color: #ff4b4b; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                🔴 Start Speaking
+            </button>
+            <p id="voice-status" style="margin-top: 10px; font-size: 14px; color: #555;">Click button to convert voice to text...</p>
+        </div>
+
+        <script>
+            function startConverting() {
+                var status = document.getElementById('voice-status');
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    var recognition = new SpeechRecognition();
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+                    recognition.lang = 'en-US';
+
+                    recognition.onstart = function() { status.innerHTML = '🎙️ Listening... Speak now!'; };
+                    recognition.onspeechend = function() { status.innerHTML = '✅ Processing complete!'; recognition.stop(); };
+                    recognition.onresult = function(event) {
+                        status.innerHTML = '<strong>Recognized Text:</strong> ' + event.results[0][0].transcript;
+                    };
+                    recognition.onerror = function(event) { status.innerHTML = '❌ Voice Error: ' + event.error; };
+                    recognition.start();
+                } else {
+                    status.innerHTML = '⚠️ Voice recognition requires Google Chrome browser.';
+                }
+            }
+        </script>
+        """, unsafe_allow_html=True)
+
+        user_prompt = st.text_area("Your Instructions / Prompt / Speech Text", placeholder="Type or paste your prompt here...", height=100)
+
+        # Unlimited Multi-File Upload Option (`accept_multiple_files=True`)
+        uploaded_files = st.file_uploader(
+            "➕ Upload Files (Unlimited PNG, JPG, JPEG, TXT files)", 
+            type=["png", "jpg", "jpeg", "txt"], 
+            accept_multiple_files=True
+        )
+
+        process_btn = st.button("Analyze & Process Files")
+
+        if process_btn:
+            if not user_prompt.strip() and not uploaded_files:
+                st.warning("Please enter instructions or upload files.")
+            else:
+                try:
+                    with st.spinner("Processing files and response..."):
+                        contents = []
+                        
+                        if uploaded_files:
+                            for file in uploaded_files:
+                                if "image" in file.type:
+                                    img = Image.open(file)
+                                    contents.append(img)
+                                elif "text" in file.type:
+                                    txt = file.read().decode("utf-8")
+                                    contents.append(f"\n[File: {file.name}]\n{txt}")
+
+                        if user_prompt.strip():
+                            contents.append(user_prompt)
+
+                        response = model.generate_content(contents)
+                        
+                    st.success("Analysis Complete!")
+                    st.markdown("---")
+                    st.markdown("### 🤖 AI Response:")
+                    st.write(response.text)
+                except Exception as e:
+                    st.error(f"Error processing request: {e}")
+
+    # ---------------- TAB 5: ASSIGNMENT & ESSAY WRITER ----------------
+    with tab5:
+        st.subheader("📚 Assignment & Homework Writer")
+        st.write("Generate high-quality assignments, essays, research outlines, and coursework.")
+
+        with st.form("assignment_form"):
+            col_a1, col_a2 = st.columns(2)
+            with col_a1:
+                academic_level = st.selectbox("Academic Level", ["School", "College / High School", "Undergraduate (University)", "Postgraduate / Master's"])
+                doc_type = st.selectbox("Document Type", ["Full Assignment", "Essay", "Research Paper Outline", "Case Study Solution", "Question Answers"])
+            with col_a2:
+                word_count = st.selectbox("Approximate Word Count", ["Short (~300 words)", "Medium (~700 words)", "Long (~1500 words)", "Comprehensive (~2500+ words)"])
+                formatting_style = st.selectbox("Formatting Style", ["Standard Headings & Bullets", "APA Style", "MLA Style", "Harvard Style"])
+
+            subject_topic = st.text_input("Subject & Assignment Topic", placeholder="e.g., Computer Science: Artificial Intelligence in Modern Healthcare")
+            additional_instructions = st.text_area("Specific Questions or Guidelines (Optional)", placeholder="Paste assignment questions or specific guidelines here...")
+
+            assign_submit = st.form_submit_button("Generate Assignment")
+
+        if assign_submit:
+            if not subject_topic.strip():
+                st.warning("Please enter a subject and topic.")
+            else:
+                try:
+                    assignment_prompt = (
+                        f"You are an expert academic tutor. Write a high-quality, well-researched {doc_type}.\n\n"
+                        f"- Level: {academic_level}\n"
+                        f"- Length: {word_count}\n"
+                        f"- Formatting Style: {formatting_style}\n"
+                        f"- Subject & Topic: {subject_topic}\n"
+                        f"- Specific Guidelines: {additional_instructions if additional_instructions else 'None'}\n\n"
+                        f"Ensure clear subheadings, structured paragraphs, logical flow, and academic tone."
+                    )
+                    with st.spinner("Writing assignment..."):
+                        response = model.generate_content(assignment_prompt)
+                    
+                    st.success("Assignment Generated Successfully!")
+                    st.markdown("---")
+                    st.markdown(response.text)
+                except Exception as e:
+                    st.error(f"Error generating assignment: {e}")
