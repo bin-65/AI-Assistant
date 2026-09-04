@@ -16,7 +16,7 @@ else:
     model = genai.GenerativeModel("gemini-3.6-flash")
 
     # Creating Two Tabs
-    tab1, tab2 = st.tabs(["✍️ Content Assistant", "🌐 Language Translator"])
+    tab1, tab2 = st.tabs(["✍️ Content Assistant", "🌐 Multi-Language Translator"])
 
     # ---------------- TAB 1: CONTENT ASSISTANT ----------------
     with tab1:
@@ -49,13 +49,18 @@ else:
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # ---------------- TAB 2: TRANSLATOR TO ENGLISH ----------------
+    # ---------------- TAB 2: MULTI-LANGUAGE TRANSLATOR ----------------
     with tab2:
-        st.subheader("Translate Any Language to English")
-        st.write("Enter text in any language (Urdu, Spanish, Arabic, French, etc.) and translate it accurately into English.")
+        st.subheader("Translate Any Language to Target Language")
+        st.write("Enter text in any language and select your desired target language.")
+        
+        target_language = st.selectbox(
+            "Select Target Language", 
+            ["English", "Urdu", "Arabic", "Spanish", "French", "German", "Hindi", "Chinese", "Turkish", "Italian"]
+        )
         
         input_text = st.text_area("Source Text", placeholder="Write or paste your text here...", height=150)
-        translate_btn = st.button("Translate to English")
+        translate_btn = st.button("Translate Text")
 
         if translate_btn:
             if not input_text.strip():
@@ -63,15 +68,15 @@ else:
             else:
                 try:
                     translation_prompt = (
-                        "You are a professional translator. Automatically detect the source language of the following text "
-                        "and accurately translate it into fluent, natural English. Provide only the translated English text:\n\n"
+                        f"You are a professional translator. Automatically detect the source language of the following text "
+                        f"and accurately translate it into fluent, natural {target_language}. Provide only the translated text:\n\n"
                         f"{input_text}"
                     )
                     with st.spinner("Translating..."):
                         response = model.generate_content(translation_prompt)
                     st.success("Translation Complete!")
                     st.markdown("---")
-                    st.markdown("### English Translation:")
+                    st.markdown(f"### Translated Text ({target_language}):")
                     st.write(response.text)
                 except Exception as e:
                     st.error(f"Error: {e}")
