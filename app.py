@@ -5,6 +5,10 @@ import urllib.parse
 import pypdf
 import docx
 import pptx
+from docx import Document
+from pptx import Presentation
+from fpdf import FPDF
+import io
 
 # Page configuration
 st.set_page_config(page_title="AI Multi-Tool Assistant", page_icon="⚡", layout="wide")
@@ -24,10 +28,10 @@ else:
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "✍️ Content Assistant", 
         "🌐 Translator", 
-        "🎨 Image Generator", 
+        "🎨 AI Image Generator 📸", 
         "⚡ Smart AI Workspace",
         "📚 Assignment Writer",
-        "📑 Document Hub (Create/Upload/MCQs)"
+        "📑 Advanced Document Hub"
     ])
 
     # ---------------- TAB 1: CONTENT ASSISTANT ----------------
@@ -59,16 +63,10 @@ else:
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # ---------------- TAB 2: MULTI-LANGUAGE TRANSLATOR ----------------
+    # ---------------- TAB 2: TRANSLATOR ----------------
     with tab2:
         st.subheader("Multi-Language Translator")
-        languages_50 = [
-            "English", "Urdu", "Arabic", "Hindi", "Pashto", "Punjabi", "Sindhi", "Balochi", "Spanish", "French", 
-            "German", "Chinese", "Japanese", "Korean", "Russian", "Turkish", "Italian", "Portuguese", "Persian (Farsi)", "Bengali",
-            "Dutch", "Greek", "Hebrew", "Indonesian", "Malay", "Thai", "Vietnamese", "Polish", "Swedish", "Norwegian",
-            "Danish", "Finnish", "Czech", "Hungarian", "Romanian", "Ukrainian", "Filipino (Tagalog)", "Swahili", "Tamil", "Telugu"
-        ]
-        
+        languages_50 = ["English", "Urdu", "Arabic", "Hindi", "Pashto", "Punjabi", "Sindhi", "Spanish", "French", "German", "Chinese"]
         target_language = st.selectbox("Select Target Language", languages_50)
         input_text = st.text_area("Source Text", placeholder="Write or paste your text here...", height=150)
         translate_btn = st.button("Translate Text")
@@ -78,7 +76,7 @@ else:
                 st.warning("Please enter some text to translate.")
             else:
                 try:
-                    translation_prompt = f"Automatically detect the source language and translate to natural {target_language}:\n\n{input_text}"
+                    translation_prompt = f"Automatically detect source language and translate to {target_language}:\n\n{input_text}"
                     with st.spinner("Translating..."):
                         response = model.generate_content(translation_prompt)
                     st.success("Translation Complete!")
@@ -89,11 +87,11 @@ else:
 
     # ---------------- TAB 3: AI IMAGE GENERATOR ----------------
     with tab3:
-        st.subheader("AI Image Generator")
-        img_prompt = st.text_area("Image Description / Prompt", placeholder="e.g., A futuristic city in HD digital art", height=100)
+        st.subheader("🎨 AI Image Generator")
+        img_prompt = st.text_area("Image Description / Prompt", placeholder="e.g., 3D diagram of solar system", height=100)
         col_style, col_ratio = st.columns(2)
         with col_style:
-            image_style = st.selectbox("Style", ["Photorealistic", "Digital Art", "3D Render", "Anime / Cartoon", "Cinematic"])
+            image_style = st.selectbox("Style", ["Photorealistic", "Digital Art", "3D Render", "Educational Diagram", "Cinematic"])
         with col_ratio:
             aspect_ratio = st.selectbox("Aspect Ratio", ["Square (1:1)", "Landscape (16:9)", "Portrait (9:16)"])
 
@@ -105,174 +103,200 @@ else:
             else:
                 try:
                     with st.spinner("Creating image..."):
-                        full_prompt = f"{img_prompt}, positive vibes, high quality, {image_style} style"
+                        full_prompt = f"{img_prompt}, high quality, {image_style} style"
                         encoded_prompt = urllib.parse.quote(full_prompt)
                         width, height = (1024, 1024) if aspect_ratio == "Square (1:1)" else ((1280, 720) if aspect_ratio == "Landscape (16:9)" else (720, 1280))
                         image_url = f"https://pollinations.ai/p/{encoded_prompt}?width={width}&height={height}&seed=42&model=flux"
                         st.image(image_url, caption=f"Generated Image: {img_prompt}", use_container_width=True)
                         st.success("Image Generated Successfully!")
+                        st.markdown(f'<a href="{image_url}" target="_blank" download="generated_image.jpg"><button style="background-color: #ff4b4b; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">Download 📥</button></a>', unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"Error generating image: {e}")
 
     # ---------------- TAB 4: SMART AI WORKSPACE ----------------
     with tab4:
-        st.subheader("⚡ Smart AI Workspace (Multi-File & Voice)")
-        user_prompt = st.text_area("Your Instructions / Speech Text", placeholder="Type or paste prompt here...", height=100)
-        uploaded_files = st.file_uploader("➕ Upload Files (Unlimited Images/Text)", type=["png", "jpg", "jpeg", "txt"], accept_multiple_files=True)
-        process_btn = st.button("Analyze & Process Files")
+        st.subheader("⚡ Smart AI Workspace")
+        user_prompt = st.text_area("Instructions / Prompt", placeholder="Type here...", height=100)
+        uploaded_files = st.file_uploader("Upload Files", type=["png", "jpg", "jpeg", "txt"], accept_multiple_files=True)
+        process_btn = st.button("Process")
 
         if process_btn:
-            if not user_prompt.strip() and not uploaded_files:
-                st.warning("Please enter instructions or upload files.")
+            if not user_prompt.strip() and not uploaded_files: st.warning("Please enter input.")
             else:
                 try:
                     with st.spinner("Processing..."):
                         contents = []
                         if uploaded_files:
                             for file in uploaded_files:
-                                if "image" in file.type:
-                                    contents.append(Image.open(file))
-                                elif "text" in file.type:
-                                    contents.append(f"\n[File: {file.name}]\n{file.read().decode('utf-8')}")
-                        if user_prompt.strip():
-                            contents.append(user_prompt)
+                                if "image" in file.type: contents.append(Image.open(file))
+                                elif "text" in file.type: contents.append(file.read().decode('utf-8'))
+                        if user_prompt.strip(): contents.append(user_prompt)
                         response = model.generate_content(contents)
-                    st.success("Complete!")
-                    st.markdown("---")
+                    st.success("Done!")
                     st.markdown(response.text)
-                except Exception as e:
-                    st.error(f"Error: {e}")
+                except Exception as e: st.error(f"Error: {e}")
 
     # ---------------- TAB 5: ASSIGNMENT WRITER ----------------
     with tab5:
-        st.subheader("📚 Assignment & Homework Writer")
+        st.subheader("📚 Assignment Writer")
         with st.form("assignment_form"):
-            col_a1, col_a2 = st.columns(2)
-            with col_a1:
-                academic_level = st.selectbox("Academic Level", ["School", "College", "Undergraduate", "Postgraduate"])
-                doc_type = st.selectbox("Document Type", ["Full Assignment", "Multiple Choice Questions (MCQs)", "Essay", "Research Paper", "Case Study"])
-            with col_a2:
-                word_count = st.selectbox("Word Count", ["Short (~300 words)", "Medium (~700 words)", "Long (~1500 words)", "Unlimited / Comprehensive (~3000+ words)"])
-                formatting_style = st.selectbox("Formatting", ["Standard Headings", "APA Style", "MLA Style", "Harvard Style"])
-
-            subject_topic = st.text_input("Topic", placeholder="e.g., Artificial Intelligence in Healthcare")
-            additional_instructions = st.text_area("Specific Guidelines", placeholder="Paste instructions here...")
-            assign_submit = st.form_submit_button("Generate Document")
+            subject_topic = st.text_input("Topic", placeholder="e.g., Quantum Computing")
+            academic_level = st.selectbox("Level", ["School", "College", "Undergraduate", "Postgraduate"])
+            assign_submit = st.form_submit_button("Generate")
 
         if assign_submit:
-            if not subject_topic.strip():
-                st.warning("Please enter a topic.")
+            if not subject_topic.strip(): st.warning("Enter topic.")
             else:
                 try:
-                    assignment_prompt = f"Write {doc_type} for level: {academic_level}, length: {word_count}, style: {formatting_style}, topic: {subject_topic}. Instructions: {additional_instructions}"
-                    with st.spinner("Writing..."):
-                        response = model.generate_content(assignment_prompt)
-                    st.success("Complete!")
-                    st.markdown("---")
+                    prompt = f"Write detailed assignment on {subject_topic} for level {academic_level}."
+                    with st.spinner("Writing..."): response = model.generate_content(prompt)
                     st.markdown(response.text)
-                except Exception as e:
-                    st.error(f"Error: {e}")
+                except Exception as e: st.error(f"Error: {e}")
 
-    # ---------------- TAB 6: ADVANCED DOCUMENT HUB (CREATE / UPLOAD / MCQs) ----------------
+    # ---------------- TAB 6: ADVANCED DOCUMENT HUB (EXPORT MS OFFICE & MCQs) ----------------
     with tab6:
-        st.subheader("📑 Advanced Document Hub: Create, Upload & Process")
-        st.write("Create custom documents/MCQs or upload PDF, Word (.docx), PPT (.pptx), and Text (.txt) files with **no word limits**.")
+        st.subheader("📑 Advanced Document Hub")
+        
+        # Split into 2 Clear Procedures using Sub-Tabs
+        doc_sub_tab1, doc_sub_tab2 = st.tabs(["📝 1. Create New Document / File", "📤 2. Upload Document & Extract MCQs"])
 
-        col_create, col_upload = st.columns(2)
+        # ------------ PROCEDURE 1: CREATE FILE & EXPORT (PDF, DOCX, PPTX) ------------
+        with doc_sub_tab1:
+            st.markdown("### 📝 Create Document & Export to MS Office / PDF")
+            
+            doc_topic = st.text_input("Document Subject / Topic", placeholder="e.g., Fundamentals of Artificial Intelligence")
+            export_format = st.selectbox("Select Output File Format", ["MS Word (.docx)", "PowerPoint Presentation (.pptx)", "PDF Document (.pdf)"])
+            doc_length = st.selectbox("Content Length", ["Detailed Notes (~500 words)", "Full Chapter (~1500 words)", "Comprehensive Manual (~3000+ words)"])
+            custom_prompt = st.text_area("Specific Outline / Instructions (Optional)", placeholder="e.g., Add 5 slides outline with headings or detailed bullet points...")
 
-        # 2.1 Document Creation (Manual Text / MCQs Editor)
-        with col_create:
-            st.markdown("#### 📝 Create / Write Document")
-            doc_title = st.text_input("Document Title", placeholder="e.g., Computer Networks Quiz")
-            created_content = st.text_area("Create Content / Paste Raw Text / Type MCQs Draft", height=200, placeholder="Type your text or questions here...")
+            create_doc_btn = st.button("✨ Generate Document Content")
 
-        # 2.2 Unlimited Multi-Format File Upload (.pdf, .docx, .pptx, .txt)
-        with col_upload:
-            st.markdown("#### 📁 Upload Existing Documents")
-            doc_files = st.file_uploader(
-                "Upload Unlimited Files (PDF, Word, PPT, TXT)", 
+            if create_doc_btn:
+                if not doc_topic.strip():
+                    st.warning("Please enter a topic.")
+                else:
+                    try:
+                        with st.spinner("Generating document content..."):
+                            gen_prompt = (
+                                f"Create a comprehensive academic document on '{doc_topic}'.\n"
+                                f"Format target: {export_format}\n"
+                                f"Length: {doc_length}\n"
+                                f"Instructions: {custom_prompt if custom_prompt else 'Include clear headings, subheadings, bullet points, and clean structure.'}"
+                            )
+                            response = model.generate_content(gen_prompt)
+                            generated_text = response.text
+
+                        st.success("Document Generated Successfully!")
+                        st.markdown("---")
+                        
+                        # Preview & Copy Box
+                        st.markdown("#### 📄 Document Preview (Copy Text Below):")
+                        st.code(generated_text, language="markdown")
+
+                        # Export Functionalities
+                        st.markdown("#### 💾 Download Exported File:")
+                        
+                        if export_format == "MS Word (.docx)":
+                            doc = Document()
+                            doc.add_heading(doc_topic, 0)
+                            for paragraph in generated_text.split("\n\n"):
+                                doc.add_paragraph(paragraph)
+                            bio = io.BytesIO()
+                            doc.save(bio)
+                            st.download_button("📥 Download MS Word File (.docx)", data=bio.getvalue(), file_name=f"{doc_topic}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+                        elif export_format == "PowerPoint Presentation (.pptx)":
+                            prs = Presentation()
+                            slides_content = generated_text.split("\n\n")
+                            for slide_text in slides_content[:10]: # Max 10 slides
+                                slide = prs.slides.add_slide(prs.slide_layouts[1])
+                                title = slide.shapes.title
+                                body = slide.placeholders[1]
+                                title.text = doc_topic
+                                body.text = slide_text
+                            bio = io.BytesIO()
+                            prs.save(bio)
+                            st.download_button("📥 Download PowerPoint File (.pptx)", data=bio.getvalue(), file_name=f"{doc_topic}.pptx", mime="application/vnd.openxmlformats-officedocument.presentationml.presentation")
+
+                        elif export_format == "PDF Document (.pdf)":
+                            pdf = FPDF()
+                            pdf.add_page()
+                            pdf.set_font("Arial", size=11)
+                            # Basic string clean for PDF encoding
+                            clean_text = generated_text.encode('latin-1', 'replace').decode('latin-1')
+                            pdf.multi_cell(0, 10, clean_text)
+                            pdf_output = pdf.output(dest='S').encode('latin-1')
+                            st.download_button("📥 Download PDF File (.pdf)", data=pdf_output, file_name=f"{doc_topic}.pdf", mime="application/pdf")
+
+                    except Exception as e:
+                        st.error(f"Error generating document: {e}")
+
+        # ------------ PROCEDURE 2: UPLOAD & UNLIMITED MCQs EXTRACTION ------------
+        with doc_sub_tab2:
+            st.markdown("### 📤 Upload Files & Unlimited MCQs / Summary Generator")
+            
+            uploaded_docs = st.file_uploader(
+                "Upload Files (PDF, Word, PPT, TXT) - Unlimited Size Supported", 
                 type=["pdf", "docx", "pptx", "txt"], 
                 accept_multiple_files=True
             )
 
-        st.markdown("---")
-        st.markdown("#### ⚙️ Process & Action Options")
+            mcq_count = st.selectbox("Number of Questions to Extract", ["10 MCQs", "20 MCQs", "30 MCQs", "50 MCQs", "100 MCQs (Comprehensive)"])
+            task_type = st.selectbox("Task Type", ["Generate Multiple Choice Questions (MCQs) with Answer Key", "Summarize Documents", "Extract Formulas & Definitions"])
 
-        col_act1, col_act2 = st.columns(2)
-        with col_act1:
-            hub_action = st.selectbox(
-                "Select Action to Perform", 
-                [
-                    "Generate Multiple Choice Questions (MCQs) with Answer Key",
-                    "Summarize Entire Document",
-                    "Extract Key Concepts & Explanations",
-                    "Reformat & Clean Up Document",
-                    "Generate Presentation Slide Outline"
-                ]
-            )
-        with col_act2:
-            num_mcqs = st.selectbox("Number of Questions (If MCQs chosen)", ["10 MCQs", "20 MCQs", "30 MCQs", "50 MCQs"])
+            process_upload_btn = st.button("🚀 Process Uploaded Files")
 
-        custom_doc_instructions = st.text_area("Specific Instructions (Optional)", placeholder="e.g., Include difficult questions with detailed explanations for correct options.")
-        
-        execute_hub_btn = st.button("🚀 Process & Execute Document Task")
-
-        if execute_hub_btn:
-            if not created_content.strip() and not doc_files:
-                st.warning("Please create text or upload at least one file.")
-            else:
-                try:
-                    with st.spinner("Extracting multi-format text & generating output..."):
-                        extracted_text = ""
-
-                        # Process Created Text
-                        if created_content.strip():
-                            extracted_text += f"\n--- CREATED CONTENT ({doc_title}) ---\n{created_content}\n"
-
-                        # Process Uploaded Files (PDF, DOCX, PPTX, TXT)
-                        if doc_files:
-                            for file in doc_files:
-                                extracted_text += f"\n--- FILE: {file.name} ---\n"
-                                
-                                # PDF Extract
+            if process_upload_btn:
+                if not uploaded_docs:
+                    st.warning("Please upload at least one file.")
+                else:
+                    try:
+                        with st.spinner("Extracting content from files..."):
+                            extracted_full_text = ""
+                            for file in uploaded_docs:
+                                extracted_full_text += f"\n--- FILE: {file.name} ---\n"
                                 if file.name.endswith(".pdf"):
                                     pdf_reader = pypdf.PdfReader(file)
-                                    for page in pdf_reader.pages:
-                                        extracted_text += page.extract_text() or ""
-
-                                # DOCX Extract
+                                    for page in pdf_reader.pages: extracted_full_text += page.extract_text() or ""
                                 elif file.name.endswith(".docx"):
                                     doc = docx.Document(file)
-                                    for para in doc.paragraphs:
-                                        extracted_text += para.text + "\n"
-
-                                # PPTX Extract
+                                    for p in doc.paragraphs: extracted_full_text += p.text + "\n"
                                 elif file.name.endswith(".pptx"):
                                     prs = pptx.Presentation(file)
                                     for slide in prs.slides:
                                         for shape in slide.shapes:
-                                            if hasattr(shape, "text"):
-                                                extracted_text += shape.text + "\n"
-
-                                # TXT Extract
+                                            if hasattr(shape, "text"): extracted_full_text += shape.text + "\n"
                                 elif file.name.endswith(".txt"):
-                                    extracted_text += file.read().decode("utf-8")
+                                    extracted_full_text += file.read().decode("utf-8")
 
-                        # Build Master Prompt
-                        master_prompt = (
-                            f"Action Required: {hub_action}\n"
-                            f"Target Quantity/Detail: {num_mcqs}\n"
-                            f"Additional Instructions: {custom_doc_instructions}\n\n"
-                            f"=== SOURCE DOCUMENT DATA ===\n"
-                            f"{extracted_text}"
-                        )
+                            # MCQ Extraction Prompt
+                            mcq_prompt = (
+                                f"Task: {task_type}\n"
+                                f"Quantity: {mcq_count}\n"
+                                f"Instructions: Create clear multiple choice questions with options (A, B, C, D) and an Answer Key with explanations at the bottom.\n\n"
+                                f"=== SOURCE FILE TEXT ===\n"
+                                f"{extracted_full_text}"
+                            )
 
-                        response = model.generate_content(master_prompt)
+                            response = model.generate_content(mcq_prompt)
+                            output_text = response.text
 
-                    st.success("Task Completed Successfully!")
-                    st.markdown("---")
-                    st.markdown("### 📊 AI Generated Output:")
-                    st.write(response.text)
+                        st.success("Extraction Complete!")
+                        st.markdown("---")
+                        st.markdown("#### 📋 Extracted Result (Copy Code/Text Box):")
+                        st.code(output_text, language="markdown")
 
-                except Exception as e:
-                    st.error(f"Error processing documents: {e}")
+                        # Export MCQs as Word/PDF
+                        st.markdown("#### 💾 Download Output File:")
+                        
+                        # Word Download for MCQs
+                        doc_mcq = Document()
+                        doc_mcq.add_heading("Extracted MCQs & Analysis", 0)
+                        for p in output_text.split("\n\n"): doc_mcq.add_paragraph(p)
+                        bio_mcq = io.BytesIO()
+                        doc_mcq.save(bio_mcq)
+                        
+                        st.download_button("📥 Download Result as Word (.docx)", data=bio_mcq.getvalue(), file_name="Extracted_MCQs.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+                    except Exception as e:
+                        st.error(f"Error processing upload: {e}")
