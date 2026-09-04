@@ -23,7 +23,7 @@ else:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel("gemini-3.6-flash")
 
-    # Creating Five Tabs (Image Generator Removed)
+    # Creating Five Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "✍️ Content Assistant", 
         "🌐 Translator", 
@@ -83,28 +83,86 @@ else:
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # ---------------- TAB 3: SMART AI WORKSPACE ----------------
+    # ---------------- TAB 3: SMART AI WORKSPACE (PDF, Word, PPT Support Added) ----------------
     with tab3:
         st.subheader("⚡ Smart AI Workspace")
-        user_prompt = st.text_area("Instructions / Prompt", placeholder="Type here...", height=100)
-        uploaded_files = st.file_uploader("Upload Files", type=["png", "jpg", "jpeg", "txt"], accept_multiple_files=True)
-        process_btn = st.button("Process")
+        st.write("Upload Images or Documents (PDF, MS Word, PPT, TXT) and ask AI anything about them!")
+        
+        user_prompt = st.text_area("Instructions / Prompt", placeholder="e.g., Summarize these files, answer questions, or extract key points...", height=100)
+        
+        # File uploader with PDF, Word (docx), PPT (pptx), Text, and Image formats
+        uploaded_files = st.file_uploader(
+            "Upload Files (Unlimited Size: PDF, DOCX, PPTX, TXT, Images)", 
+            type=["png", "jpg", "jpeg", "pdf", "docx", "pptx", "txt"], 
+            accept_multiple_files=True
+        )
+        
+        process_btn = st.button("Process Workspace Request")
 
         if process_btn:
-            if not user_prompt.strip() and not uploaded_files: st.warning("Please enter input.")
+            if not user_prompt.strip() and not uploaded_files:
+                st.warning("Please enter instructions or upload at least one file.")
             else:
                 try:
-                    with st.spinner("Processing..."):
+                    with st.spinner("Processing files and instruction..."):
                         contents = []
+                        extracted_text_from_docs = ""
+
                         if uploaded_files:
                             for file in uploaded_files:
-                                if "image" in file.type: contents.append(Image.open(file))
-                                elif "text" in file.type: contents.append(file.read().decode('utf-8'))
-                        if user_prompt.strip(): contents.append(user_prompt)
+                                file_type = file.type or ""
+                                filename = file.name.lower()
+
+                                # Handle Images
+                                if "image" in file_type or filename.endswith((".png", ".jpg", ".jpeg")):
+                                    contents.append(Image.open(file))
+                                
+                                # Handle PDFs
+                                elif filename.endswith(".pdf"):
+                                    pdf_reader = pypdf.PdfReader(file)
+                                    pdf_text = ""
+                                    for page in pdf_reader.pages:
+                                        pdf_text += (page.extract_text() or "") + "\n"
+                                    extracted_text_from_docs += f"\n--- [PDF File: {file.name}] ---\n{pdf_text}\n"
+
+                                # Handle MS Word (.docx)
+                                elif filename.endswith(".docx"):
+                                    doc_file = docx.Document(file)
+                                    docx_text = "\n".join([p.text for p in doc_file.paragraphs])
+                                    extracted_text_from_docs += f"\n--- [Word File: {file.name}] ---\n{docx_text}\n"
+
+                                # Handle PowerPoint (.pptx)
+                                elif filename.endswith(".pptx"):
+                                    prs_file = pptx.Presentation(file)
+                                    pptx_text = ""
+                                    for slide in prs_file.slides:
+                                        for shape in slide.shapes:
+                                            if hasattr(shape, "text"):
+                                                pptx_text += shape.text + "\n"
+                                    extracted_text_from_docs += f"\n--- [PPT File: {file.name}] ---\n{pptx_text}\n"
+
+                                # Handle Plain Text (.txt)
+                                elif filename.endswith(".txt"):
+                                    txt_text = file.read().decode("utf-8", errors="ignore")
+                                    extracted_text_from_docs += f"\n--- [TXT File: {file.name}] ---\n{txt_text}\n"
+
+                        # Build final prompt structure
+                        final_instruction = ""
+                        if extracted_text_from_docs:
+                            final_instruction += f"=== EXTRACTED DOCUMENTS CONTENT ===\n{extracted_text_from_docs}\n"
+                        if user_prompt.strip():
+                            final_instruction += f"=== USER INSTRUCTION ===\n{user_prompt}"
+
+                        if final_instruction:
+                            contents.append(final_instruction)
+
                         response = model.generate_content(contents)
-                    st.success("Done!")
+
+                    st.success("Processing Complete!")
+                    st.markdown("---")
                     st.markdown(response.text)
-                except Exception as e: st.error(f"Error: {e}")
+                except Exception as e:
+                    st.error(f"Error processing workspace files: {e}")
 
     # ---------------- TAB 4: ASSIGNMENT WRITER ----------------
     with tab4:
@@ -115,13 +173,16 @@ else:
             assign_submit = st.form_submit_button("Generate")
 
         if assign_submit:
-            if not subject_topic.strip(): st.warning("Enter topic.")
+            if not subject_topic.strip():
+                st.warning("Enter topic.")
             else:
                 try:
                     prompt = f"Write detailed assignment on {subject_topic} for level {academic_level}."
-                    with st.spinner("Writing..."): response = model.generate_content(prompt)
+                    with st.spinner("Writing..."):
+                        response = model.generate_content(prompt)
                     st.markdown(response.text)
-                except Exception as e: st.error(f"Error: {e}")
+                except Exception as e:
+                    st.error(f"Error: {e}")
 
     # ---------------- TAB 5: ADVANCED DOCUMENT HUB ----------------
     with tab5:
@@ -129,7 +190,7 @@ else:
         
         doc_sub_tab1, doc_sub_tab2 = st.tabs(["📝 1. Create New Document / File", "📤 2. Upload Document & Extract MCQs"])
 
-        # PROCEDURE 1: CREATE FILE & EXPORT
+        # PROCEDURE 1: CREATE FILE & EXPORT (MS Word, PPT, PDF)
         with doc_sub_tab1:
             st.markdown("### 📝 Create Document & Export to MS Office / PDF")
             
