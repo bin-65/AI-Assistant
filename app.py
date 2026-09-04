@@ -85,31 +85,43 @@ else:
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # ---------------- TAB 3: AI IMAGE GENERATOR ----------------
+    # ---------------- TAB 3: AI IMAGE GENERATOR (ChatGPT Style Simple) ----------------
     with tab3:
         st.subheader("🎨 AI Image Generator")
-        img_prompt = st.text_area("Image Description / Prompt", placeholder="e.g., 3D diagram of solar system", height=100)
-        col_style, col_ratio = st.columns(2)
-        with col_style:
-            image_style = st.selectbox("Style", ["Photorealistic", "Digital Art", "3D Render", "Educational Diagram", "Cinematic"])
-        with col_ratio:
-            aspect_ratio = st.selectbox("Aspect Ratio", ["Square (1:1)", "Landscape (16:9)", "Portrait (9:16)"])
+        st.write("Write anything you want to create an image for (Education, Science, Art, Nature, Diagrams, 3D Models, etc.)")
+        
+        img_prompt = st.text_area(
+            "What image do you want to create?", 
+            placeholder="e.g., A detailed diagram of a human heart with labels for educational purpose", 
+            height=120
+        )
 
-        generate_img_btn = st.button("Generate Image")
+        generate_img_btn = st.button("✨ Create Image")
 
         if generate_img_btn:
             if not img_prompt.strip():
                 st.warning("Please enter an image description.")
             else:
                 try:
-                    with st.spinner("Creating image..."):
-                        full_prompt = f"{img_prompt}, high quality, {image_style} style"
-                        encoded_prompt = urllib.parse.quote(full_prompt)
-                        width, height = (1024, 1024) if aspect_ratio == "Square (1:1)" else ((1280, 720) if aspect_ratio == "Landscape (16:9)" else (720, 1280))
-                        image_url = f"https://pollinations.ai/p/{encoded_prompt}?width={width}&height={height}&seed=42&model=flux"
-                        st.image(image_url, caption=f"Generated Image: {img_prompt}", use_container_width=True)
-                        st.success("Image Generated Successfully!")
-                        st.markdown(f'<a href="{image_url}" target="_blank" download="generated_image.jpg"><button style="background-color: #ff4b4b; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">Download 📥</button></a>', unsafe_allow_html=True)
+                    with st.spinner("Generating image..."):
+                        encoded_prompt = urllib.parse.quote(img_prompt)
+                        # Pollinations AI image URL
+                        image_url = f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed=42&model=flux"
+                        
+                        # Show Image directly like ChatGPT
+                        st.image(image_url, caption=f"Prompt: {img_prompt}", use_container_width=True)
+                        st.success("Image Created Successfully!")
+                        
+                        # Download Link/Button
+                        st.markdown(f'''
+                            <div style="margin-top: 15px;">
+                                <a href="{image_url}" target="_blank" download="ai_image.jpg">
+                                    <button style="background-color: #008CBA; color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">
+                                        📥 Download Image
+                                    </button>
+                                </a>
+                            </div>
+                        ''', unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"Error generating image: {e}")
 
@@ -153,21 +165,20 @@ else:
                     st.markdown(response.text)
                 except Exception as e: st.error(f"Error: {e}")
 
-    # ---------------- TAB 6: ADVANCED DOCUMENT HUB (EXPORT MS OFFICE & MCQs) ----------------
+    # ---------------- TAB 6: ADVANCED DOCUMENT HUB ----------------
     with tab6:
         st.subheader("📑 Advanced Document Hub")
         
-        # Split into 2 Clear Procedures using Sub-Tabs
         doc_sub_tab1, doc_sub_tab2 = st.tabs(["📝 1. Create New Document / File", "📤 2. Upload Document & Extract MCQs"])
 
-        # ------------ PROCEDURE 1: CREATE FILE & EXPORT (PDF, DOCX, PPTX) ------------
+        # ------------ PROCEDURE 1: CREATE FILE & EXPORT ------------
         with doc_sub_tab1:
             st.markdown("### 📝 Create Document & Export to MS Office / PDF")
             
             doc_topic = st.text_input("Document Subject / Topic", placeholder="e.g., Fundamentals of Artificial Intelligence")
             export_format = st.selectbox("Select Output File Format", ["MS Word (.docx)", "PowerPoint Presentation (.pptx)", "PDF Document (.pdf)"])
             doc_length = st.selectbox("Content Length", ["Detailed Notes (~500 words)", "Full Chapter (~1500 words)", "Comprehensive Manual (~3000+ words)"])
-            custom_prompt = st.text_area("Specific Outline / Instructions (Optional)", placeholder="e.g., Add 5 slides outline with headings or detailed bullet points...")
+            custom_prompt = st.text_area("Specific Outline / Instructions (Optional)", placeholder="e.g., Add 5 slides outline with headings...")
 
             create_doc_btn = st.button("✨ Generate Document Content")
 
@@ -181,7 +192,7 @@ else:
                                 f"Create a comprehensive academic document on '{doc_topic}'.\n"
                                 f"Format target: {export_format}\n"
                                 f"Length: {doc_length}\n"
-                                f"Instructions: {custom_prompt if custom_prompt else 'Include clear headings, subheadings, bullet points, and clean structure.'}"
+                                f"Instructions: {custom_prompt if custom_prompt else 'Include clear headings and structure.'}"
                             )
                             response = model.generate_content(gen_prompt)
                             generated_text = response.text
@@ -189,11 +200,9 @@ else:
                         st.success("Document Generated Successfully!")
                         st.markdown("---")
                         
-                        # Preview & Copy Box
                         st.markdown("#### 📄 Document Preview (Copy Text Below):")
                         st.code(generated_text, language="markdown")
 
-                        # Export Functionalities
                         st.markdown("#### 💾 Download Exported File:")
                         
                         if export_format == "MS Word (.docx)":
@@ -208,7 +217,7 @@ else:
                         elif export_format == "PowerPoint Presentation (.pptx)":
                             prs = Presentation()
                             slides_content = generated_text.split("\n\n")
-                            for slide_text in slides_content[:10]: # Max 10 slides
+                            for slide_text in slides_content[:10]:
                                 slide = prs.slides.add_slide(prs.slide_layouts[1])
                                 title = slide.shapes.title
                                 body = slide.placeholders[1]
@@ -222,7 +231,6 @@ else:
                             pdf = FPDF()
                             pdf.add_page()
                             pdf.set_font("Arial", size=11)
-                            # Basic string clean for PDF encoding
                             clean_text = generated_text.encode('latin-1', 'replace').decode('latin-1')
                             pdf.multi_cell(0, 10, clean_text)
                             pdf_output = pdf.output(dest='S').encode('latin-1')
@@ -231,17 +239,17 @@ else:
                     except Exception as e:
                         st.error(f"Error generating document: {e}")
 
-        # ------------ PROCEDURE 2: UPLOAD & UNLIMITED MCQs EXTRACTION ------------
+        # ------------ PROCEDURE 2: UPLOAD & MCQs EXTRACTION ------------
         with doc_sub_tab2:
             st.markdown("### 📤 Upload Files & Unlimited MCQs / Summary Generator")
             
             uploaded_docs = st.file_uploader(
-                "Upload Files (PDF, Word, PPT, TXT) - Unlimited Size Supported", 
+                "Upload Files (PDF, Word, PPT, TXT)", 
                 type=["pdf", "docx", "pptx", "txt"], 
                 accept_multiple_files=True
             )
 
-            mcq_count = st.selectbox("Number of Questions to Extract", ["10 MCQs", "20 MCQs", "30 MCQs", "50 MCQs", "100 MCQs (Comprehensive)"])
+            mcq_count = st.selectbox("Number of Questions to Extract", ["10 MCQs", "20 MCQs", "30 MCQs", "50 MCQs", "100 MCQs"])
             task_type = st.selectbox("Task Type", ["Generate Multiple Choice Questions (MCQs) with Answer Key", "Summarize Documents", "Extract Formulas & Definitions"])
 
             process_upload_btn = st.button("🚀 Process Uploaded Files")
@@ -269,11 +277,10 @@ else:
                                 elif file.name.endswith(".txt"):
                                     extracted_full_text += file.read().decode("utf-8")
 
-                            # MCQ Extraction Prompt
                             mcq_prompt = (
                                 f"Task: {task_type}\n"
                                 f"Quantity: {mcq_count}\n"
-                                f"Instructions: Create clear multiple choice questions with options (A, B, C, D) and an Answer Key with explanations at the bottom.\n\n"
+                                f"Instructions: Create clear multiple choice questions with options (A, B, C, D) and Answer Key.\n\n"
                                 f"=== SOURCE FILE TEXT ===\n"
                                 f"{extracted_full_text}"
                             )
@@ -286,10 +293,7 @@ else:
                         st.markdown("#### 📋 Extracted Result (Copy Code/Text Box):")
                         st.code(output_text, language="markdown")
 
-                        # Export MCQs as Word/PDF
                         st.markdown("#### 💾 Download Output File:")
-                        
-                        # Word Download for MCQs
                         doc_mcq = Document()
                         doc_mcq.add_heading("Extracted MCQs & Analysis", 0)
                         for p in output_text.split("\n\n"): doc_mcq.add_paragraph(p)
