@@ -1,7 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import urllib.parse
 import pypdf
 import docx
 import pptx
@@ -24,11 +23,10 @@ else:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel("gemini-3.6-flash")
 
-    # Creating Six Tabs
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    # Creating Five Tabs (Image Generator Removed)
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "✍️ Content Assistant", 
         "🌐 Translator", 
-        "🎨 AI Image Generator 📸", 
         "⚡ Smart AI Workspace",
         "📚 Assignment Writer",
         "📑 Advanced Document Hub"
@@ -85,48 +83,8 @@ else:
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # ---------------- TAB 3: AI IMAGE GENERATOR (ChatGPT Style Simple) ----------------
+    # ---------------- TAB 3: SMART AI WORKSPACE ----------------
     with tab3:
-        st.subheader("🎨 AI Image Generator")
-        st.write("Write anything you want to create an image for (Education, Science, Art, Nature, Diagrams, 3D Models, etc.)")
-        
-        img_prompt = st.text_area(
-            "What image do you want to create?", 
-            placeholder="e.g., A detailed diagram of a human heart with labels for educational purpose", 
-            height=120
-        )
-
-        generate_img_btn = st.button("✨ Create Image")
-
-        if generate_img_btn:
-            if not img_prompt.strip():
-                st.warning("Please enter an image description.")
-            else:
-                try:
-                    with st.spinner("Generating image..."):
-                        encoded_prompt = urllib.parse.quote(img_prompt)
-                        # Pollinations AI image URL
-                        image_url = f"https://pollinations.ai/p/{encoded_prompt}?width=1024&height=1024&seed=42&model=flux"
-                        
-                        # Show Image directly like ChatGPT
-                        st.image(image_url, caption=f"Prompt: {img_prompt}", use_container_width=True)
-                        st.success("Image Created Successfully!")
-                        
-                        # Download Link/Button
-                        st.markdown(f'''
-                            <div style="margin-top: 15px;">
-                                <a href="{image_url}" target="_blank" download="ai_image.jpg">
-                                    <button style="background-color: #008CBA; color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">
-                                        📥 Download Image
-                                    </button>
-                                </a>
-                            </div>
-                        ''', unsafe_allow_html=True)
-                except Exception as e:
-                    st.error(f"Error generating image: {e}")
-
-    # ---------------- TAB 4: SMART AI WORKSPACE ----------------
-    with tab4:
         st.subheader("⚡ Smart AI Workspace")
         user_prompt = st.text_area("Instructions / Prompt", placeholder="Type here...", height=100)
         uploaded_files = st.file_uploader("Upload Files", type=["png", "jpg", "jpeg", "txt"], accept_multiple_files=True)
@@ -148,8 +106,8 @@ else:
                     st.markdown(response.text)
                 except Exception as e: st.error(f"Error: {e}")
 
-    # ---------------- TAB 5: ASSIGNMENT WRITER ----------------
-    with tab5:
+    # ---------------- TAB 4: ASSIGNMENT WRITER ----------------
+    with tab4:
         st.subheader("📚 Assignment Writer")
         with st.form("assignment_form"):
             subject_topic = st.text_input("Topic", placeholder="e.g., Quantum Computing")
@@ -165,13 +123,13 @@ else:
                     st.markdown(response.text)
                 except Exception as e: st.error(f"Error: {e}")
 
-    # ---------------- TAB 6: ADVANCED DOCUMENT HUB ----------------
-    with tab6:
+    # ---------------- TAB 5: ADVANCED DOCUMENT HUB ----------------
+    with tab5:
         st.subheader("📑 Advanced Document Hub")
         
         doc_sub_tab1, doc_sub_tab2 = st.tabs(["📝 1. Create New Document / File", "📤 2. Upload Document & Extract MCQs"])
 
-        # ------------ PROCEDURE 1: CREATE FILE & EXPORT ------------
+        # PROCEDURE 1: CREATE FILE & EXPORT
         with doc_sub_tab1:
             st.markdown("### 📝 Create Document & Export to MS Office / PDF")
             
@@ -199,7 +157,6 @@ else:
 
                         st.success("Document Generated Successfully!")
                         st.markdown("---")
-                        
                         st.markdown("#### 📄 Document Preview (Copy Text Below):")
                         st.code(generated_text, language="markdown")
 
@@ -239,7 +196,7 @@ else:
                     except Exception as e:
                         st.error(f"Error generating document: {e}")
 
-        # ------------ PROCEDURE 2: UPLOAD & MCQs EXTRACTION ------------
+        # PROCEDURE 2: UPLOAD & MCQs EXTRACTION
         with doc_sub_tab2:
             st.markdown("### 📤 Upload Files & Unlimited MCQs / Summary Generator")
             
