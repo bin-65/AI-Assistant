@@ -8,35 +8,11 @@ from docx import Document
 from pptx import Presentation
 from fpdf import FPDF
 import io
-import datetime
 
 # Page configuration
 st.set_page_config(page_title="AI Multi-Tool Assistant", page_icon="⚡", layout="wide")
 
-st.title("⚡ AI Multi-Tool Assistant")
-
-# ---------------- PER-FEATURE DAILY USAGE TRACKER (1000 USES PER FEATURE) ----------------
-MAX_FEATURE_LIMIT = 1000
-today_str = str(datetime.date.today())
-
-# Reset usage if date changes
-if "usage_date" not in st.session_state or st.session_state.usage_date != today_str:
-    st.session_state.usage_date = today_str
-    st.session_state.feature_counts = {
-        "content_assistant": 0,
-        "translator": 0,
-        "workspace": 0,
-        "assignment": 0,
-        "doc_hub": 0
-    }
-
-def check_and_increment(feature_key, feature_name):
-    current_count = st.session_state.feature_counts.get(feature_key, 0)
-    if current_count >= MAX_FEATURE_LIMIT:
-        st.error(f"🚨 **{feature_name}** ki daily limit (1000 uses) poori ho chuki hai! Aap doosre features use kar sakte hain ya kal try karein.")
-        return False
-    st.session_state.feature_counts[feature_key] = current_count + 1
-    return True
+st.title("⚡ AI Multi-Tool Assistant (Unlimited Edition)")
 
 # Helper function to generate PDF bytes safely
 def generate_pdf_bytes(title, text_content):
@@ -69,14 +45,9 @@ else:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel("gemini-3.6-flash")
 
-    # Sidebar Per-Feature Counter Status
-    st.sidebar.markdown(f"### 📊 Per-Feature Daily Limits")
-    st.sidebar.caption(f"📅 Date: {today_str}")
-    st.sidebar.write(f"✍️ Content: {st.session_state.feature_counts['content_assistant']}/{MAX_FEATURE_LIMIT}")
-    st.sidebar.write(f"🌐 Translator: {st.session_state.feature_counts['translator']}/{MAX_FEATURE_LIMIT}")
-    st.sidebar.write(f"⚡ Workspace: {st.session_state.feature_counts['workspace']}/{MAX_FEATURE_LIMIT}")
-    st.sidebar.write(f"📚 Assignment: {st.session_state.feature_counts['assignment']}/{MAX_FEATURE_LIMIT}")
-    st.sidebar.write(f"📑 Doc Hub: {st.session_state.feature_counts['doc_hub']}/{MAX_FEATURE_LIMIT}")
+    # Sidebar Information
+    st.sidebar.markdown("### ♾️ App Access Status")
+    st.sidebar.success("✅ **Unlimited Access Enabled**\nAap tamam features bina kisi limit ke kitni bhi baar use kar sakte hain!")
 
     # Five Active Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -105,7 +76,7 @@ else:
         if submit_btn:
             if not topic or not target_audience:
                 st.warning("Please fill in all fields.")
-            elif check_and_increment("content_assistant", "Content Assistant"):
+            else:
                 try:
                     prompt = f"Platform: {platform}\nType: {content_type}\nTone: {tone}\nAudience: {target_audience}\nTopic: {topic}"
                     with st.spinner("Generating..."):
@@ -137,7 +108,7 @@ else:
         if translate_btn:
             if not input_text.strip():
                 st.warning("Please enter some text to translate.")
-            elif check_and_increment("translator", "Translator"):
+            else:
                 try:
                     translation_prompt = f"Automatically detect source language and translate to {target_language}:\n\n{input_text}"
                     with st.spinner("Translating..."):
@@ -174,7 +145,7 @@ else:
         if process_btn:
             if not user_prompt.strip() and not uploaded_files:
                 st.warning("Please enter instructions or upload at least one file.")
-            elif check_and_increment("workspace", "Smart AI Workspace"):
+            else:
                 try:
                     with st.spinner("Processing workspace files..."):
                         contents = []
@@ -240,7 +211,7 @@ else:
         if assign_submit:
             if not subject_topic.strip():
                 st.warning("Enter topic.")
-            elif check_and_increment("assignment", "Assignment Writer"):
+            else:
                 try:
                     prompt = f"Write detailed assignment on {subject_topic} for level {academic_level}."
                     with st.spinner("Writing assignment..."):
@@ -281,7 +252,7 @@ else:
             if create_doc_btn:
                 if not doc_topic.strip():
                     st.warning("Please enter a topic.")
-                elif check_and_increment("doc_hub", "Advanced Document Hub"):
+                else:
                     try:
                         with st.spinner("Generating document content..."):
                             gen_prompt = (
@@ -341,7 +312,7 @@ else:
             if process_upload_btn:
                 if not uploaded_docs:
                     st.warning("Please upload at least one file.")
-                elif check_and_increment("doc_hub", "Advanced Document Hub"):
+                else:
                     try:
                         with st.spinner("Extracting content and generating MCQs..."):
                             extracted_full_text = ""
