@@ -4,4 +4,4 @@ Pillow
 pypdf
 python-docx
 python-pptx
-fpdf
+fpdf2
