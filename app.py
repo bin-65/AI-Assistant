@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling (Off-White Theme & Light Blue Bar)
+# Custom Styling
 st.markdown("""
     <style>
     .stApp {
@@ -85,7 +85,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# PDF Generator
+# PDF Generator Helper
 def generate_pdf_bytes(title, text_content):
     pdf = FPDF()
     pdf.add_page()
@@ -97,7 +97,7 @@ def generate_pdf_bytes(title, text_content):
     pdf.multi_cell(0, 7, clean_text)
     return pdf.output()
 
-# Word Generator
+# Word Generator Helper
 def generate_docx_bytes(title, text_content):
     doc = Document()
     doc.add_heading(title, 0)
@@ -107,35 +107,31 @@ def generate_docx_bytes(title, text_content):
     doc.save(bio)
     return bio.getvalue()
 
-# Smart Dynamic Model Call (Resolves 404 permanently)
+# Direct Permanent Solution for Model Execution
 def call_gemini_ai(contents):
+    # Retrieve all valid models available for this specific API Key dynamically
+    valid_models = []
     try:
-        # Dynamically fetch models supported by your API Key
-        available_models = [m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods]
-        
-        # Priority list of models
-        priority_models = ["models/gemini-1.5-flash-8b", "models/gemini-1.5-flash", "models/gemini-2.5-flash", "models/gemini-pro"]
-        
-        selected_model = None
-        for p in priority_models:
-            if p in available_models:
-                selected_model = p
-                break
-        
-        if not selected_model and available_models:
-            selected_model = available_models[0]
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                valid_models.append(m.name)
+    except Exception:
+        pass
 
-        if not selected_model:
-            selected_model = "gemini-1.5-flash-8b"
-
-        model = genai.GenerativeModel(selected_model)
-        response = model.generate_content(contents)
-        return response.text
-    except Exception as e:
-        # Emergency Fallback
-        model = genai.GenerativeModel("gemini-1.5-flash-8b")
-        response = model.generate_content(contents)
-        return response.text
+    # Try supported models in sequence
+    test_queue = valid_models if valid_models else ["models/gemini-1.5-flash", "models/gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"]
+    
+    last_err = None
+    for model_identifier in test_queue:
+        try:
+            model = genai.GenerativeModel(model_name=model_identifier)
+            response = model.generate_content(contents)
+            return response.text
+        except Exception as e:
+            last_err = e
+            continue
+            
+    raise Exception(f"API Model Error: {last_err}")
 
 # Check API Key
 api_key = st.secrets.get("GEMINI_API_KEY")
@@ -146,7 +142,7 @@ else:
     genai.configure(api_key=api_key)
 
     st.sidebar.markdown("### ⚙️ System Status")
-    st.sidebar.success("✅ **Dynamic Model Discovery Active**\nZero 404 Error Mode.")
+    st.sidebar.success("✅ **Dynamic API Auto-Detection Active**")
     st.sidebar.markdown("---")
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
