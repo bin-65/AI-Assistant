@@ -20,60 +20,26 @@ st.set_page_config(
 # Custom Styling
 st.markdown("""
     <style>
-    .stApp {
-        background-color: #f8fafc;
-        color: #1e293b;
-    }
-    
+    .stApp { background-color: #f8fafc; color: #1e293b; }
     .header-box {
         background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-        padding: 24px;
-        border-radius: 12px;
-        border: 1px solid #7dd3fc;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.12);
+        padding: 24px; border-radius: 12px; border: 1px solid #7dd3fc;
+        margin-bottom: 20px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.12);
     }
-    .main-title {
-        color: #0369a1;
-        font-size: 28px;
-        font-weight: 800;
-        margin: 0;
-    }
-    .sub-title {
-        color: #0284c7;
-        font-size: 14px;
-        margin-top: 4px;
-        font-weight: 500;
-    }
-
+    .main-title { color: #0369a1; font-size: 28px; font-weight: 800; margin: 0; }
+    .sub-title { color: #0284c7; font-size: 14px; margin-top: 4px; font-weight: 500; }
     .stButton>button {
         background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
-        color: #ffffff !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        padding: 8px 18px !important;
-        transition: all 0.3s ease !important;
+        color: #ffffff !important; border: none !important;
+        border-radius: 8px !important; font-weight: 600 !important;
+        padding: 8px 18px !important; transition: all 0.3s ease !important;
     }
-    .stButton>button:hover {
-        background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
-    }
-
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] {
-        border-radius: 8px;
-        padding: 8px 18px;
-        background-color: #ffffff;
-        color: #475569;
-        border: 1px solid #e2e8f0;
+        border-radius: 8px; padding: 8px 18px; background-color: #ffffff;
+        color: #475569; border: 1px solid #e2e8f0;
     }
-    .stTabs [aria-selected="true"] {
-        background-color: #0284c7 !important;
-        color: #ffffff !important;
-        border: none !important;
-    }
+    .stTabs [aria-selected="true"] { background-color: #0284c7 !important; color: #ffffff !important; border: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -81,11 +47,11 @@ st.markdown("""
 st.markdown("""
     <div class="header-box">
         <div class="main-title">⚡ AI Multi-Tool Studio</div>
-        <div class="sub-title">All-in-One AI Suite | PDF & MS Word Direct File Output Supported</div>
+        <div class="sub-title">All-in-One AI Suite | PDF & MS Word Export Fixed</div>
     </div>
 """, unsafe_allow_html=True)
 
-# PDF Generator Helper
+# PDF Generator Helper (FIXED: Explicitly converts bytearray to bytes)
 def generate_pdf_bytes(title, text_content):
     pdf = FPDF()
     pdf.add_page()
@@ -93,9 +59,13 @@ def generate_pdf_bytes(title, text_content):
     pdf.cell(0, 10, title.encode('latin-1', 'replace').decode('latin-1'), ln=True)
     pdf.set_font("Arial", size=10)
     pdf.ln(5)
+    
+    # Split content into lines to prevent overflow
     clean_text = text_content.encode('latin-1', 'replace').decode('latin-1')
     pdf.multi_cell(0, 7, clean_text)
-    return pdf.output()
+    
+    # Convert bytearray to standard bytes
+    return bytes(pdf.output())
 
 # Word Generator Helper
 def generate_docx_bytes(title, text_content):
@@ -107,46 +77,17 @@ def generate_docx_bytes(title, text_content):
     doc.save(bio)
     return bio.getvalue()
 
-# Automatic Safe Model Selection Logic (No More 404 Errors)
+# Direct High-Speed Gemini API Call
 def call_gemini_ai(contents):
-    generation_config = genai.GenerationConfig(
-        max_output_tokens=2048,
-        temperature=0.7
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        generation_config=genai.GenerationConfig(
+            max_output_tokens=2048,
+            temperature=0.7
+        )
     )
-    
-    # 1. Fetch available models for your API Key directly from Google
-    available_models = []
-    try:
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                available_models.append(m.name)
-    except Exception:
-        pass
-
-    # 2. Priority model order with fallback to auto-discovered models
-    models_to_try = available_models + [
-        "gemini-1.5-flash", 
-        "models/gemini-1.5-flash", 
-        "gemini-1.5-pro", 
-        "models/gemini-1.5-pro",
-        "gemini-pro"
-    ]
-    
-    # Remove duplicates while preserving order
-    seen = set()
-    unique_models = [x for x in models_to_try if not (x in seen or seen.add(x))]
-
-    last_err = None
-    for m_name in unique_models:
-        try:
-            model = genai.GenerativeModel(model_name=m_name, generation_config=generation_config)
-            response = model.generate_content(contents)
-            return response.text
-        except Exception as e:
-            last_err = e
-            continue
-
-    raise Exception(f"API Connection Error: {last_err}")
+    response = model.generate_content(contents)
+    return response.text
 
 # Check API Key
 api_key = st.secrets.get("GEMINI_API_KEY")
@@ -157,7 +98,7 @@ else:
     genai.configure(api_key=api_key)
 
     st.sidebar.markdown("### ⚙️ System Status")
-    st.sidebar.success("⚡ **Auto Model Discovery Active (404 Protected)**")
+    st.sidebar.success("⚡ **PDF Export Engine Fixed**")
     st.sidebar.markdown("---")
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -172,27 +113,33 @@ else:
         st.markdown("---")
         st.success(f"🎉 Generated Successfully! (Target Format: {target_format})")
         
-        col_pdf, col_doc, col_copy = st.columns([1, 1, 2])
-        
-        with col_pdf:
-            st.download_button(
-                "📥 Download PDF (.pdf)", 
-                data=generate_pdf_bytes(doc_title, result_text), 
-                file_name=f"{doc_title}.pdf", 
-                mime="application/pdf", 
-                use_container_width=True,
-                key=f"{key_prefix}_pdf"
-            )
-        with col_doc:
-            st.download_button(
-                "📄 Download Word (.docx)", 
-                data=generate_docx_bytes(doc_title, result_text), 
-                file_name=f"{doc_title}.docx", 
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", 
-                use_container_width=True,
-                key=f"{key_prefix}_docx"
-            )
-        
+        try:
+            pdf_data = generate_pdf_bytes(doc_title, result_text)
+            docx_data = generate_docx_bytes(doc_title, result_text)
+            
+            col_pdf, col_doc = st.columns([1, 1])
+            
+            with col_pdf:
+                st.download_button(
+                    label="📥 Download PDF (.pdf)", 
+                    data=pdf_data, 
+                    file_name=f"{doc_title}.pdf", 
+                    mime="application/pdf", 
+                    use_container_width=True,
+                    key=f"{key_prefix}_pdf"
+                )
+            with col_doc:
+                st.download_button(
+                    label="📄 Download Word (.docx)", 
+                    data=docx_data, 
+                    file_name=f"{doc_title}.docx", 
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", 
+                    use_container_width=True,
+                    key=f"{key_prefix}_docx"
+                )
+        except Exception as export_err:
+            st.error(f"Error generating download files: {export_err}")
+            
         st.markdown("### 📄 Result Output:")
         st.code(result_text, language="markdown")
 
@@ -248,7 +195,7 @@ else:
     with tab3:
         st.subheader("⚡ Smart File & Image Workspace")
         output_format_3 = st.radio("Select Preferred Export File", ["PDF Document (.pdf)", "MS Word (.docx)", "On-Screen Text"], horizontal=True, key="of3")
-        user_prompt = st.text_area("Analysis Prompt", placeholder="e.g., 20 mcqs in pdf file...", height=100)
+        user_prompt = st.text_area("Analysis Prompt", placeholder="e.g., 10 mcqs with answers...", height=100)
         uploaded_files = st.file_uploader(
             "Upload Documents / Images", 
             type=["png", "jpg", "jpeg", "pdf", "docx", "pptx", "txt"], 
@@ -274,7 +221,7 @@ else:
                                     contents.append(Image.open(file))
                                 elif filename.endswith(".pdf"):
                                     pdf_reader = pypdf.PdfReader(file)
-                                    pdf_text = "\n".join([page.extract_text() or "" for page in pdf_reader.pages[:25]])
+                                    pdf_text = "\n".join([page.extract_text() or "" for page in pdf_reader.pages[:15]])
                                     extracted_text_from_docs += f"\n--- [PDF: {file.name}] ---\n{pdf_text}\n"
                                 elif filename.endswith(".docx"):
                                     doc_file = docx.Document(file)
@@ -292,9 +239,9 @@ else:
 
                         final_instruction = ""
                         if extracted_text_from_docs:
-                            final_instruction += f"=== EXTRACTED DOCUMENTS CONTENT ===\n{extracted_text_from_docs[:15000]}\n"
+                            final_instruction += f"=== EXTRACTED DOCUMENTS CONTENT ===\n{extracted_text_from_docs[:10000]}\n"
                         if user_prompt.strip():
-                            final_instruction += f"=== USER INSTRUCTION ===\nFormat output properly for conversion to {output_format_3}.\n{user_prompt}"
+                            final_instruction += f"=== USER INSTRUCTION ===\n{user_prompt}"
 
                         if final_instruction: contents.append(final_instruction)
                         res_text = call_gemini_ai(contents)
@@ -367,7 +314,7 @@ else:
                                 extracted_full_text += f"\n--- FILE: {file.name} ---\n"
                                 if file.name.endswith(".pdf"):
                                     pdf_reader = pypdf.PdfReader(file)
-                                    for page in pdf_reader.pages[:25]: extracted_full_text += (page.extract_text() or "") + "\n"
+                                    for page in pdf_reader.pages[:15]: extracted_full_text += (page.extract_text() or "") + "\n"
                                 elif file.name.endswith(".docx"):
                                     doc = docx.Document(file)
                                     for p in doc.paragraphs: extracted_full_text += p.text + "\n"
@@ -379,7 +326,7 @@ else:
                                 elif file.name.endswith(".txt"):
                                     extracted_full_text += file.read().decode("utf-8", errors="ignore")
 
-                            mcq_prompt = f"Task: {task_type}\nQuantity: {mcq_count}\nSource Text:\n{extracted_full_text[:15000]}"
+                            mcq_prompt = f"Task: {task_type}\nQuantity: {mcq_count}\nSource Text:\n{extracted_full_text[:10000]}"
                             output_text = call_gemini_ai(mcq_prompt)
 
                         render_output_section(output_text, "Extracted_MCQs", output_format_5, "tab5_2")
