@@ -107,18 +107,37 @@ def generate_docx_bytes(title, text_content):
     doc.save(bio)
     return bio.getvalue()
 
-# Safe AI Model Call
+# Automatic Safe Model Selection Logic (No More 404 Errors)
 def call_gemini_ai(contents):
     generation_config = genai.GenerationConfig(
         max_output_tokens=2048,
         temperature=0.7
     )
     
-    # Standard official endpoints
-    models_to_try = ["gemini-1.5-flash", "models/gemini-1.5-flash", "gemini-1.5-pro"]
-    last_err = None
+    # 1. Fetch available models for your API Key directly from Google
+    available_models = []
+    try:
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available_models.append(m.name)
+    except Exception:
+        pass
 
-    for m_name in models_to_try:
+    # 2. Priority model order with fallback to auto-discovered models
+    models_to_try = available_models + [
+        "gemini-1.5-flash", 
+        "models/gemini-1.5-flash", 
+        "gemini-1.5-pro", 
+        "models/gemini-1.5-pro",
+        "gemini-pro"
+    ]
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_models = [x for x in models_to_try if not (x in seen or seen.add(x))]
+
+    last_err = None
+    for m_name in unique_models:
         try:
             model = genai.GenerativeModel(model_name=m_name, generation_config=generation_config)
             response = model.generate_content(contents)
@@ -138,7 +157,7 @@ else:
     genai.configure(api_key=api_key)
 
     st.sidebar.markdown("### ⚙️ System Status")
-    st.sidebar.success("⚡ **Fast Mode & Direct File Output Active**")
+    st.sidebar.success("⚡ **Auto Model Discovery Active (404 Protected)**")
     st.sidebar.markdown("---")
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -151,7 +170,7 @@ else:
 
     def render_output_section(result_text, doc_title, target_format, key_prefix):
         st.markdown("---")
-        st.success(f"🎉 Generated Successfully! (Target: {target_format})")
+        st.success(f"🎉 Generated Successfully! (Target Format: {target_format})")
         
         col_pdf, col_doc, col_copy = st.columns([1, 1, 2])
         
@@ -174,7 +193,7 @@ else:
                 key=f"{key_prefix}_docx"
             )
         
-        st.markdown("### 📄 Preview:")
+        st.markdown("### 📄 Result Output:")
         st.code(result_text, language="markdown")
 
     # TAB 1: CONTENT ASSISTANT
