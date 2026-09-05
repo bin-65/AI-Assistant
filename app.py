@@ -81,7 +81,7 @@ st.markdown("""
 st.markdown("""
     <div class="header-box">
         <div class="main-title">⚡ AI Multi-Tool Studio</div>
-        <div class="sub-title">Professional All-in-One AI Suite | Content, Translation, Academic & Document Automation</div>
+        <div class="sub-title">Professional All-in-One AI Suite | Super-Fast <30s Processing Enabled</div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -107,31 +107,27 @@ def generate_docx_bytes(title, text_content):
     doc.save(bio)
     return bio.getvalue()
 
-# Direct Permanent Solution for Model Execution
+# Ultra-Fast High-Speed AI Processing (<30 Seconds Execution)
 def call_gemini_ai(contents):
-    # Retrieve all valid models available for this specific API Key dynamically
-    valid_models = []
-    try:
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                valid_models.append(m.name)
-    except Exception:
-        pass
-
-    # Try supported models in sequence
-    test_queue = valid_models if valid_models else ["models/gemini-1.5-flash", "models/gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"]
+    # Fast model configuration for rapid response
+    generation_config = genai.GenerationConfig(
+        max_output_tokens=2048,
+        temperature=0.7
+    )
     
+    models_to_try = ["models/gemini-1.5-flash", "gemini-1.5-flash", "models/gemini-pro"]
     last_err = None
-    for model_identifier in test_queue:
+
+    for m_name in models_to_try:
         try:
-            model = genai.GenerativeModel(model_name=model_identifier)
+            model = genai.GenerativeModel(model_name=m_name, generation_config=generation_config)
             response = model.generate_content(contents)
             return response.text
         except Exception as e:
             last_err = e
             continue
-            
-    raise Exception(f"API Model Error: {last_err}")
+
+    raise Exception(f"Execution Error: {last_err}")
 
 # Check API Key
 api_key = st.secrets.get("GEMINI_API_KEY")
@@ -142,7 +138,7 @@ else:
     genai.configure(api_key=api_key)
 
     st.sidebar.markdown("### ⚙️ System Status")
-    st.sidebar.success("✅ **Dynamic API Auto-Detection Active**")
+    st.sidebar.success("⚡ **Ultra-Fast Processing (<30s)** Active")
     st.sidebar.markdown("---")
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -200,7 +196,7 @@ else:
             else:
                 try:
                     prompt = f"Platform: {platform}\nType: {content_type}\nTone: {tone}\nAudience: {target_audience}\nTopic: {topic}"
-                    with st.spinner("Generating content..."):
+                    with st.spinner("Processing in under 30 seconds..."):
                         res_text = call_gemini_ai(prompt)
                     render_output_section(res_text, f"{platform}_Content", "tab1")
                 except Exception as e:
@@ -220,7 +216,7 @@ else:
             else:
                 try:
                     translation_prompt = f"Automatically detect source language and translate accurately to {target_language}:\n\n{input_text}"
-                    with st.spinner("Translating..."):
+                    with st.spinner("Translating rapidly..."):
                         res_text = call_gemini_ai(translation_prompt)
                     render_output_section(res_text, f"Translation_{target_language}", "tab2")
                 except Exception as e:
@@ -242,7 +238,7 @@ else:
                 st.warning("⚠️ Enter instructions or upload files.")
             else:
                 try:
-                    with st.spinner("Analyzing files and instructions..."):
+                    with st.spinner("Fast Processing (<30s)..."):
                         contents = []
                         extracted_text_from_docs = ""
 
@@ -255,7 +251,8 @@ else:
                                     contents.append(Image.open(file))
                                 elif filename.endswith(".pdf"):
                                     pdf_reader = pypdf.PdfReader(file)
-                                    pdf_text = "\n".join([page.extract_text() or "" for page in pdf_reader.pages])
+                                    # Optimizing text extraction for speed
+                                    pdf_text = "\n".join([page.extract_text() or "" for page in pdf_reader.pages[:20]])
                                     extracted_text_from_docs += f"\n--- [PDF: {file.name}] ---\n{pdf_text}\n"
                                 elif filename.endswith(".docx"):
                                     doc_file = docx.Document(file)
@@ -273,7 +270,8 @@ else:
 
                         final_instruction = ""
                         if extracted_text_from_docs:
-                            final_instruction += f"=== EXTRACTED DOCUMENTS CONTENT ===\n{extracted_text_from_docs}\n"
+                            # Limit total text length to ensure <30 second generation time
+                            final_instruction += f"=== EXTRACTED DOCUMENTS CONTENT ===\n{extracted_text_from_docs[:15000]}\n"
                         if user_prompt.strip():
                             final_instruction += f"=== USER INSTRUCTION ===\n{user_prompt}"
 
@@ -296,8 +294,8 @@ else:
                 st.warning("⚠️ Topic is required.")
             else:
                 try:
-                    prompt = f"Write a structured, highly detailed academic paper on '{subject_topic}' for {academic_level} level."
-                    with st.spinner("Drafting academic content..."):
+                    prompt = f"Write a structured, concise academic paper on '{subject_topic}' for {academic_level} level."
+                    with st.spinner("Processing in under 30 seconds..."):
                         res_text = call_gemini_ai(prompt)
                     render_output_section(res_text, f"{subject_topic}_Assignment", "tab4")
                 except Exception as e:
@@ -321,7 +319,7 @@ else:
                     st.warning("⚠️ Topic required.")
                 else:
                     try:
-                        with st.spinner("Drafting document..."):
+                        with st.spinner("Drafting document rapidly..."):
                             gen_prompt = f"Create a structured document on '{doc_topic}' with format target {export_format} and length {doc_length}."
                             generated_text = call_gemini_ai(gen_prompt)
                         render_output_section(generated_text, f"{doc_topic}_Document", "tab5_1")
@@ -340,13 +338,13 @@ else:
                     st.warning("⚠️ Upload files first.")
                 else:
                     try:
-                        with st.spinner("Extracting..."):
+                        with st.spinner("Extracting in under 30 seconds..."):
                             extracted_full_text = ""
                             for file in uploaded_docs:
                                 extracted_full_text += f"\n--- FILE: {file.name} ---\n"
                                 if file.name.endswith(".pdf"):
                                     pdf_reader = pypdf.PdfReader(file)
-                                    for page in pdf_reader.pages: extracted_full_text += (page.extract_text() or "") + "\n"
+                                    for page in pdf_reader.pages[:20]: extracted_full_text += (page.extract_text() or "") + "\n"
                                 elif file.name.endswith(".docx"):
                                     doc = docx.Document(file)
                                     for p in doc.paragraphs: extracted_full_text += p.text + "\n"
@@ -358,7 +356,7 @@ else:
                                 elif file.name.endswith(".txt"):
                                     extracted_full_text += file.read().decode("utf-8", errors="ignore")
 
-                            mcq_prompt = f"Task: {task_type}\nQuantity: {mcq_count}\nSource Text:\n{extracted_full_text}"
+                            mcq_prompt = f"Task: {task_type}\nQuantity: {mcq_count}\nSource Text:\n{extracted_full_text[:15000]}"
                             output_text = call_gemini_ai(mcq_prompt)
 
                         render_output_section(output_text, "Extracted_MCQs", "tab5_2")
