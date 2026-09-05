@@ -17,117 +17,99 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ---------------- COLOR THEME SELECTION FILTER ----------------
-st.sidebar.markdown("### 🎨 Dashboard Color Filter")
-selected_theme = st.sidebar.selectbox(
-    "Choose Color Theme",
-    ["⚡ Electric Blue", "💜 Neon Purple", "💚 Emerald Green", "🔥 Crimson Red"]
-)
-
-# Theme Palette Definitions
-themes = {
-    "⚡ Electric Blue": {"primary": "#2563eb", "primary_hover": "#1d4ed8", "accent": "#38bdf8", "gradient": "linear-gradient(135deg, #1e2640 0%, #0f172a 100%)"},
-    "💜 Neon Purple": {"primary": "#8b5cf6", "primary_hover": "#7c3aed", "accent": "#c084fc", "gradient": "linear-gradient(135deg, #2e1065 0%, #0f172a 100%)"},
-    "💚 Emerald Green": {"primary": "#059669", "primary_hover": "#047857", "accent": "#34d399", "gradient": "linear-gradient(135deg, #064e3b 0%, #0f172a 100%)"},
-    "🔥 Crimson Red": {"primary": "#dc2626", "primary_hover": "#b91c1c", "accent": "#f87171", "gradient": "linear-gradient(135deg, #450a0a 0%, #0f172a 100%)"}
-}
-
-active_theme = themes[selected_theme]
-
-# Custom CSS with Dynamic Theme Injection
-st.markdown(f"""
+# Custom Styling (Half-White Background & Light Blue Top Header Bar)
+st.markdown("""
     <style>
-    .stApp {{
-        background-color: #0b0f17;
-        color: #e2e8f0;
-    }}
+    /* Main App Background (Half-White / Off-White) */
+    .stApp {
+        background-color: #f8fafc;
+        color: #1e293b;
+    }
     
-    /* Header Card */
-    .header-box {{
-        background: {active_theme['gradient']};
-        padding: 28px;
-        border-radius: 16px;
-        border: 1px solid #334155;
-        margin-bottom: 25px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
-    }}
-    .main-title {{
-        color: #ffffff;
-        font-size: 32px;
+    /* Top Header Bar (Light Blue Gradient) */
+    .header-box {
+        background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+        padding: 26px;
+        border-radius: 14px;
+        border: 1px solid #7dd3fc;
+        margin-bottom: 22px;
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.12);
+    }
+    .main-title {
+        color: #0369a1;
+        font-size: 30px;
         font-weight: 800;
         margin: 0;
         letter-spacing: -0.5px;
-    }}
-    .sub-title {{
-        color: #94a3b8;
+    }
+    .sub-title {
+        color: #0284c7;
         font-size: 15px;
-        margin-top: 6px;
-    }}
+        margin-top: 5px;
+        font-weight: 500;
+    }
 
-    /* Dynamic Buttons */
-    .stButton>button {{
-        background: {active_theme['primary']} !important;
-        color: white !important;
+    /* Professional Light Blue Action Buttons */
+    .stButton>button {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+        color: #ffffff !important;
         border: none !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
         font-weight: 600 !important;
         padding: 10px 22px !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
-    }}
-    .stButton>button:hover {{
-        background: {active_theme['primary_hover']} !important;
+        box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25) !important;
+    }
+    .stButton>button:hover {
+        background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
         transform: translateY(-1px);
-    }}
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35) !important;
+    }
 
-    /* Dynamic Output Color Labels */
-    .copy-header {{
+    /* Output Section Headers & Cards */
+    .copy-header {
         font-size: 14px;
         font-weight: 700;
-        color: {active_theme['accent']};
+        color: #0284c7;
         display: flex;
         align-items: center;
         gap: 8px;
         margin-bottom: 8px;
-    }}
-    .download-header {{
+    }
+    .download-header {
         font-size: 14px;
         font-weight: 700;
-        color: {active_theme['accent']};
+        color: #0369a1;
         margin-top: 20px;
         margin-bottom: 10px;
-    }}
+    }
 
-    /* Tab Active Color */
-    .stTabs [aria-selected="true"] {{
-        background-color: {active_theme['primary']} !important;
-        color: white !important;
-    }}
-    .stTabs [data-baseweb="tab"] {{
+    /* Tab Styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+    }
+    .stTabs [data-baseweb="tab"] {
         border-radius: 8px;
         padding: 8px 18px;
-        background-color: #1e293b;
-        color: #94a3b8;
-    }}
+        background-color: #ffffff;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #0284c7 !important;
+        color: #ffffff !important;
+        border: none !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# Main Banner
-st.markdown(f"""
+# Main Top Header Bar (Light Blue Accent Bar)
+st.markdown("""
     <div class="header-box">
         <div class="main-title">⚡ AI Multi-Tool Studio</div>
-        <div class="sub-title">Enterprise grade multi-purpose AI assistant | Active Theme: <b>{selected_theme}</b></div>
+        <div class="sub-title">Professional All-in-One AI Suite | Content, Translation, Academic & Document Automation</div>
     </div>
 """, unsafe_allow_html=True)
-
-# Quick Metric Dashboard Stats
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("License Access", "Unlimited ♾️")
-m2.metric("Processing Speed", "Ultra Fast ⚡")
-m3.metric("Supported Formats", "PDF, Word, PPT")
-m4.metric("Security Level", "Encrypted 🔒")
-
-st.markdown("---")
 
 # Helper function to generate PDF bytes safely
 def generate_pdf_bytes(title, text_content):
@@ -159,6 +141,12 @@ if not api_key:
 else:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel("gemini-1.5-flash")
+
+    # Sidebar Information
+    st.sidebar.markdown("### ⚙️ System Status")
+    st.sidebar.success("✅ **Unlimited Access Enabled**\nAll features are active with unlimited daily limits.")
+    st.sidebar.markdown("---")
+    st.sidebar.caption("🚀 Powered by Gemini AI Engine")
 
     # Five Active Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
