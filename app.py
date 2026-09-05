@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling (Half-White Background & Light Blue Top Header Bar)
+# Custom Styling (Off-White Background & Light Blue Accent Header)
 st.markdown("""
     <style>
     /* Main App Background (Half-White / Off-White) */
@@ -29,59 +29,37 @@ st.markdown("""
     /* Top Header Bar (Light Blue Gradient) */
     .header-box {
         background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-        padding: 26px;
-        border-radius: 14px;
+        padding: 24px;
+        border-radius: 12px;
         border: 1px solid #7dd3fc;
-        margin-bottom: 22px;
+        margin-bottom: 20px;
         box-shadow: 0 4px 12px rgba(14, 165, 233, 0.12);
     }
     .main-title {
         color: #0369a1;
-        font-size: 30px;
+        font-size: 28px;
         font-weight: 800;
         margin: 0;
-        letter-spacing: -0.5px;
     }
     .sub-title {
         color: #0284c7;
-        font-size: 15px;
-        margin-top: 5px;
+        font-size: 14px;
+        margin-top: 4px;
         font-weight: 500;
     }
 
-    /* Professional Light Blue Action Buttons */
+    /* Professional Buttons */
     .stButton>button {
         background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
         color: #ffffff !important;
         border: none !important;
         border-radius: 8px !important;
         font-weight: 600 !important;
-        padding: 10px 22px !important;
+        padding: 8px 18px !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25) !important;
     }
     .stButton>button:hover {
         background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35) !important;
-    }
-
-    /* Output Section Headers & Cards */
-    .copy-header {
-        font-size: 14px;
-        font-weight: 700;
-        color: #0284c7;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 8px;
-    }
-    .download-header {
-        font-size: 14px;
-        font-weight: 700;
-        color: #0369a1;
-        margin-top: 20px;
-        margin-bottom: 10px;
     }
 
     /* Tab Styling */
@@ -103,7 +81,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Main Top Header Bar (Light Blue Accent Bar)
+# Main Top Header Bar
 st.markdown("""
     <div class="header-box">
         <div class="main-title">⚡ AI Multi-Tool Studio</div>
@@ -133,6 +111,20 @@ def generate_docx_bytes(title, text_content):
     doc.save(bio)
     return bio.getvalue()
 
+# AI Content Generation Helper with Automatic Fallback for Errors
+def call_gemini_ai(contents):
+    model_names = ["gemini-2.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro"]
+    last_error = None
+    for model_name in model_names:
+        try:
+            m = genai.GenerativeModel(model_name)
+            response = m.generate_content(contents)
+            return response.text
+        except Exception as e:
+            last_error = e
+            continue
+    raise last_error
+
 # Check API Key from Secrets
 api_key = st.secrets.get("GEMINI_API_KEY")
 
@@ -140,11 +132,10 @@ if not api_key:
     st.error("🚨 API Key not found! Please configure `GEMINI_API_KEY` in Streamlit Secrets.")
 else:
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")
 
     # Sidebar Information
     st.sidebar.markdown("### ⚙️ System Status")
-    st.sidebar.success("✅ **Unlimited Access Enabled**\nAll features are active with unlimited daily limits.")
+    st.sidebar.success("✅ **Unlimited Access Active**\nModel Auto-Failover Enabled.")
     st.sidebar.markdown("---")
     st.sidebar.caption("🚀 Powered by Gemini AI Engine")
 
@@ -157,20 +148,47 @@ else:
         "📑 Advanced Doc Hub"
     ])
 
+    # Helper rendering function for Output with Download + Copy right beside process
+    def render_output_section(result_text, doc_title, key_prefix):
+        st.markdown("---")
+        st.success("🎉 Processed Successfully!")
+        
+        col_copy, col_pdf, col_doc = st.columns([2, 1, 1])
+        with col_copy:
+            st.markdown("📋 **Copy Result:**")
+        with col_pdf:
+            st.download_button(
+                "📥 Download PDF (.pdf)", 
+                data=generate_pdf_bytes(doc_title, result_text), 
+                file_name=f"{doc_title}.pdf", 
+                mime="application/pdf", 
+                use_container_width=True,
+                key=f"{key_prefix}_pdf"
+            )
+        with col_doc:
+            st.download_button(
+                "📄 Download Word (.docx)", 
+                data=generate_docx_bytes(doc_title, result_text), 
+                file_name=f"{doc_title}.docx", 
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", 
+                use_container_width=True,
+                key=f"{key_prefix}_docx"
+            )
+        st.code(result_text, language="markdown")
+
     # ---------------- TAB 1: CONTENT ASSISTANT ----------------
     with tab1:
         st.subheader("✍️ Social Media Content Generator")
-        with st.form("content_form"):
-            col1, col2 = st.columns(2)
-            with col1:
-                platform = st.selectbox("Target Platform", ["LinkedIn", "Instagram", "Twitter / X", "Facebook"])
-                content_type = st.selectbox("Content Style", ["Informational Post", "Promotional / Ad", "Storytelling"])
-            with col2:
-                tone = st.selectbox("Tone & Persona", ["Professional", "Casual & Friendly", "Persuasive", "Inspirational"])
-                target_audience = st.text_input("Target Audience", placeholder="e.g., Tech Founders, Students")
-            
-            topic = st.text_area("Core Brief / Topic", placeholder="Describe key talking points...")
-            submit_btn = st.form_submit_button("🚀 Generate Content")
+        col1, col2 = st.columns(2)
+        with col1:
+            platform = st.selectbox("Target Platform", ["LinkedIn", "Instagram", "Twitter / X", "Facebook"])
+            content_type = st.selectbox("Content Style", ["Informational Post", "Promotional / Ad", "Storytelling"])
+        with col2:
+            tone = st.selectbox("Tone & Persona", ["Professional", "Casual & Friendly", "Persuasive", "Inspirational"])
+            target_audience = st.text_input("Target Audience", placeholder="e.g., Tech Founders, Students")
+        
+        topic = st.text_area("Core Brief / Topic", placeholder="Describe key talking points...")
+        submit_btn = st.button("🚀 Generate Content", key="tab1_btn")
 
         if submit_btn:
             if not topic or not target_audience:
@@ -179,21 +197,8 @@ else:
                 try:
                     prompt = f"Platform: {platform}\nType: {content_type}\nTone: {tone}\nAudience: {target_audience}\nTopic: {topic}"
                     with st.spinner("Generating content..."):
-                        response = model.generate_content(prompt)
-                    res_text = response.text
-                    
-                    st.success("🎉 Generated Successfully!")
-                    st.markdown("---")
-                    
-                    st.markdown('<div class="copy-header">📋 One-Click Copy Document:</div>', unsafe_allow_html=True)
-                    st.code(res_text, language="markdown")
-                    
-                    st.markdown('<div class="download-header">📥 Export Options:</div>', unsafe_allow_html=True)
-                    col_d1, col_d2 = st.columns(2)
-                    with col_d1:
-                        st.download_button("📥 Download PDF (.pdf)", data=generate_pdf_bytes(f"{platform} Post", res_text), file_name="Social_Media_Post.pdf", mime="application/pdf", use_container_width=True)
-                    with col_d2:
-                        st.download_button("📄 Download MS Word (.docx)", data=generate_docx_bytes(f"{platform} Post", res_text), file_name="Social_Media_Post.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+                        res_text = call_gemini_ai(prompt)
+                    render_output_section(res_text, f"{platform}_Content", "tab1")
                 except Exception as e:
                     st.error(f"Execution Error: {e}")
 
@@ -203,7 +208,7 @@ else:
         languages_50 = ["English", "Urdu", "Arabic", "Hindi", "Pashto", "Punjabi", "Sindhi", "Spanish", "French", "German", "Chinese"]
         target_language = st.selectbox("Select Target Language", languages_50)
         input_text = st.text_area("Source Text", placeholder="Paste source text here...", height=150)
-        translate_btn = st.button("🌐 Translate Content")
+        translate_btn = st.button("🌐 Translate Content", key="tab2_btn")
 
         if translate_btn:
             if not input_text.strip():
@@ -212,41 +217,28 @@ else:
                 try:
                     translation_prompt = f"Automatically detect source language and translate accurately to {target_language}:\n\n{input_text}"
                     with st.spinner("Translating..."):
-                        response = model.generate_content(translation_prompt)
-                    res_text = response.text
-                    
-                    st.success("🎉 Translation Complete!")
-                    st.markdown("---")
-                    
-                    st.markdown('<div class="copy-header">📋 One-Click Copy Translation:</div>', unsafe_allow_html=True)
-                    st.code(res_text, language="markdown")
-                    
-                    st.markdown('<div class="download-header">📥 Export Translation:</div>', unsafe_allow_html=True)
-                    col_d1, col_d2 = st.columns(2)
-                    with col_d1:
-                        st.download_button("📥 Download PDF (.pdf)", data=generate_pdf_bytes(f"Translation ({target_language})", res_text), file_name="Translation.pdf", mime="application/pdf", use_container_width=True)
-                    with col_d2:
-                        st.download_button("📄 Download MS Word (.docx)", data=generate_docx_bytes(f"Translation ({target_language})", res_text), file_name="Translation.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+                        res_text = call_gemini_ai(translation_prompt)
+                    render_output_section(res_text, f"Translation_{target_language}", "tab2")
                 except Exception as e:
                     st.error(f"Execution Error: {e}")
 
     # ---------------- TAB 3: SMART AI WORKSPACE ----------------
     with tab3:
         st.subheader("⚡ Smart File & Image Workspace")
-        user_prompt = st.text_area("Analysis Prompt", placeholder="e.g., Summarize or extract information...", height=100)
+        user_prompt = st.text_area("Analysis Prompt", placeholder="e.g., mcqs 10 chahyie es file me se...", height=100)
         uploaded_files = st.file_uploader(
             "Upload Documents / Images", 
             type=["png", "jpg", "jpeg", "pdf", "docx", "pptx", "txt"], 
             accept_multiple_files=True
         )
-        process_btn = st.button("⚡ Process Query")
+        process_btn = st.button("⚡ Process Query", key="tab3_btn")
 
         if process_btn:
             if not user_prompt.strip() and not uploaded_files:
                 st.warning("⚠️ Enter instructions or upload files.")
             else:
                 try:
-                    with st.spinner("Analyzing data..."):
+                    with st.spinner("Analyzing files and instructions..."):
                         contents = []
                         extracted_text_from_docs = ""
 
@@ -282,31 +274,18 @@ else:
                             final_instruction += f"=== USER INSTRUCTION ===\n{user_prompt}"
 
                         if final_instruction: contents.append(final_instruction)
-                        response = model.generate_content(contents)
-                        res_text = response.text
+                        res_text = call_gemini_ai(contents)
 
-                    st.success("🎉 Analysis Complete!")
-                    st.markdown("---")
-                    
-                    st.markdown('<div class="copy-header">📋 One-Click Copy Result:</div>', unsafe_allow_html=True)
-                    st.code(res_text, language="markdown")
-                    
-                    st.markdown('<div class="download-header">📥 Export Options:</div>', unsafe_allow_html=True)
-                    col_d1, col_d2 = st.columns(2)
-                    with col_d1:
-                        st.download_button("📥 Download PDF (.pdf)", data=generate_pdf_bytes("Workspace Output", res_text), file_name="Smart_Workspace_Output.pdf", mime="application/pdf", use_container_width=True)
-                    with col_d2:
-                        st.download_button("📄 Download MS Word (.docx)", data=generate_docx_bytes("Workspace Output", res_text), file_name="Smart_Workspace_Output.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+                    render_output_section(res_text, "Workspace_Output", "tab3")
                 except Exception as e:
                     st.error(f"Execution Error: {e}")
 
     # ---------------- TAB 4: ASSIGNMENT WRITER ----------------
     with tab4:
         st.subheader("📚 Academic & Assignment Writer")
-        with st.form("assignment_form"):
-            subject_topic = st.text_input("Topic / Subject Header", placeholder="e.g., Deep Learning & Neural Networks")
-            academic_level = st.selectbox("Academic Target Level", ["School Level", "High School / College", "Undergraduate", "Postgraduate / PhD"])
-            assign_submit = st.form_submit_button("✨ Generate Assignment")
+        subject_topic = st.text_input("Topic / Subject Header", placeholder="e.g., Deep Learning & Neural Networks")
+        academic_level = st.selectbox("Academic Target Level", ["School Level", "High School / College", "Undergraduate", "Postgraduate / PhD"])
+        assign_submit = st.button("✨ Generate Assignment", key="tab4_btn")
 
         if assign_submit:
             if not subject_topic.strip():
@@ -315,21 +294,8 @@ else:
                 try:
                     prompt = f"Write a structured, highly detailed academic paper on '{subject_topic}' for {academic_level} level."
                     with st.spinner("Drafting academic content..."):
-                        response = model.generate_content(prompt)
-                    res_text = response.text
-                    
-                    st.success("🎉 Assignment Prepared!")
-                    st.markdown("---")
-                    
-                    st.markdown('<div class="copy-header">📋 One-Click Copy Assignment:</div>', unsafe_allow_html=True)
-                    st.code(res_text, language="markdown")
-                    
-                    st.markdown('<div class="download-header">📥 Export Assignment:</div>', unsafe_allow_html=True)
-                    col_d1, col_d2 = st.columns(2)
-                    with col_d1:
-                        st.download_button("📥 Download PDF (.pdf)", data=generate_pdf_bytes(f"Assignment: {subject_topic}", res_text), file_name=f"{subject_topic}_Assignment.pdf", mime="application/pdf", use_container_width=True)
-                    with col_d2:
-                        st.download_button("📄 Download MS Word (.docx)", data=generate_docx_bytes(f"Assignment: {subject_topic}", res_text), file_name=f"{subject_topic}_Assignment.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+                        res_text = call_gemini_ai(prompt)
+                    render_output_section(res_text, f"{subject_topic}_Assignment", "tab4")
                 except Exception as e:
                     st.error(f"Execution Error: {e}")
 
@@ -344,7 +310,7 @@ else:
             doc_length = st.selectbox("Scope", ["Detailed Notes (~500 words)", "Full Chapter (~1500 words)", "Full Manual (~3000+ words)"])
             custom_prompt = st.text_area("Specific Outline (Optional)")
 
-            create_doc_btn = st.button("✨ Build Document")
+            create_doc_btn = st.button("✨ Build Document", key="tab5_sub1_btn")
 
             if create_doc_btn:
                 if not doc_topic.strip():
@@ -353,33 +319,8 @@ else:
                     try:
                         with st.spinner("Drafting document..."):
                             gen_prompt = f"Create a structured document on '{doc_topic}' with format target {export_format} and length {doc_length}."
-                            response = model.generate_content(gen_prompt)
-                            generated_text = response.text
-
-                        st.success("🎉 Document Created!")
-                        st.markdown("---")
-                        
-                        st.markdown('<div class="copy-header">📋 One-Click Copy Document:</div>', unsafe_allow_html=True)
-                        st.code(generated_text, language="markdown")
-
-                        st.markdown('<div class="download-header">📥 Export Document:</div>', unsafe_allow_html=True)
-                        col_d1, col_d2 = st.columns(2)
-                        with col_d1:
-                            st.download_button("📥 Download PDF (.pdf)", data=generate_pdf_bytes(doc_topic, generated_text), file_name=f"{doc_topic}.pdf", mime="application/pdf", use_container_width=True)
-                        with col_d2:
-                            if export_format == "PowerPoint Presentation (.pptx)":
-                                prs = Presentation()
-                                slides_content = generated_text.split("\n\n")
-                                for slide_text in slides_content[:10]:
-                                    slide = prs.slides.add_slide(prs.slide_layouts[1])
-                                    slide.shapes.title.text = doc_topic
-                                    slide.placeholders[1].text = slide_text
-                                bio = io.BytesIO()
-                                prs.save(bio)
-                                st.download_button("📊 Download PPTX (.pptx)", data=bio.getvalue(), file_name=f"{doc_topic}.pptx", mime="application/vnd.openxmlformats-officedocument.presentationml.presentation", use_container_width=True)
-                            else:
-                                st.download_button("📄 Download MS Word (.docx)", data=generate_docx_bytes(doc_topic, generated_text), file_name=f"{doc_topic}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
-
+                            generated_text = call_gemini_ai(gen_prompt)
+                        render_output_section(generated_text, f"{doc_topic}_Document", "tab5_1")
                     except Exception as e:
                         st.error(f"Execution Error: {e}")
 
@@ -388,7 +329,7 @@ else:
             mcq_count = st.selectbox("Question Volume", ["10 MCQs", "20 MCQs", "30 MCQs", "50 MCQs", "100 MCQs"])
             task_type = st.selectbox("Extraction Goal", ["Generate MCQs with Answer Key", "Summarize Key Concepts", "Extract Formulas"])
 
-            process_upload_btn = st.button("🚀 Process & Extract")
+            process_upload_btn = st.button("🚀 Process & Extract", key="tab5_sub2_btn")
 
             if process_upload_btn:
                 if not uploaded_docs:
@@ -414,21 +355,8 @@ else:
                                     extracted_full_text += file.read().decode("utf-8", errors="ignore")
 
                             mcq_prompt = f"Task: {task_type}\nQuantity: {mcq_count}\nSource Text:\n{extracted_full_text}"
-                            response = model.generate_content(mcq_prompt)
-                            output_text = response.text
+                            output_text = call_gemini_ai(mcq_prompt)
 
-                        st.success("🎉 Extraction Complete!")
-                        st.markdown("---")
-                        
-                        st.markdown('<div class="copy-header">📋 One-Click Copy Result:</div>', unsafe_allow_html=True)
-                        st.code(output_text, language="markdown")
-
-                        st.markdown('<div class="download-header">📥 Export Question Bank:</div>', unsafe_allow_html=True)
-                        col_mcq1, col_mcq2 = st.columns(2)
-                        with col_mcq1:
-                            st.download_button("📥 Download PDF (.pdf)", data=generate_pdf_bytes("Extracted MCQs", output_text), file_name="Extracted_MCQs.pdf", mime="application/pdf", use_container_width=True)
-                        with col_mcq2:
-                            st.download_button("📄 Download MS Word (.docx)", data=generate_docx_bytes("Extracted MCQs", output_text), file_name="Extracted_MCQs.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
-
+                        render_output_section(output_text, "Extracted_MCQs", "tab5_2")
                     except Exception as e:
                         st.error(f"Execution Error: {e}")
