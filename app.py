@@ -81,7 +81,7 @@ st.markdown("""
 st.markdown("""
     <div class="header-box">
         <div class="main-title">⚡ AI Multi-Tool Studio</div>
-        <div class="sub-title">Professional All-in-One AI Suite | Super-Fast <30s Processing Enabled</div>
+        <div class="sub-title">All-in-One AI Suite | PDF & MS Word Direct File Output Supported</div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -107,15 +107,15 @@ def generate_docx_bytes(title, text_content):
     doc.save(bio)
     return bio.getvalue()
 
-# Ultra-Fast High-Speed AI Processing (<30 Seconds Execution)
+# Safe AI Model Call
 def call_gemini_ai(contents):
-    # Fast model configuration for rapid response
     generation_config = genai.GenerationConfig(
         max_output_tokens=2048,
         temperature=0.7
     )
     
-    models_to_try = ["models/gemini-1.5-flash", "gemini-1.5-flash", "models/gemini-pro"]
+    # Standard official endpoints
+    models_to_try = ["gemini-1.5-flash", "models/gemini-1.5-flash", "gemini-1.5-pro"]
     last_err = None
 
     for m_name in models_to_try:
@@ -127,7 +127,7 @@ def call_gemini_ai(contents):
             last_err = e
             continue
 
-    raise Exception(f"Execution Error: {last_err}")
+    raise Exception(f"API Connection Error: {last_err}")
 
 # Check API Key
 api_key = st.secrets.get("GEMINI_API_KEY")
@@ -138,7 +138,7 @@ else:
     genai.configure(api_key=api_key)
 
     st.sidebar.markdown("### ⚙️ System Status")
-    st.sidebar.success("⚡ **Ultra-Fast Processing (<30s)** Active")
+    st.sidebar.success("⚡ **Fast Mode & Direct File Output Active**")
     st.sidebar.markdown("---")
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -149,13 +149,12 @@ else:
         "📑 Advanced Doc Hub"
     ])
 
-    def render_output_section(result_text, doc_title, key_prefix):
+    def render_output_section(result_text, doc_title, target_format, key_prefix):
         st.markdown("---")
-        st.success("🎉 Processed Successfully!")
+        st.success(f"🎉 Generated Successfully! (Target: {target_format})")
         
-        col_copy, col_pdf, col_doc = st.columns([2, 1, 1])
-        with col_copy:
-            st.markdown("📋 **Copy Result:**")
+        col_pdf, col_doc, col_copy = st.columns([1, 1, 2])
+        
         with col_pdf:
             st.download_button(
                 "📥 Download PDF (.pdf)", 
@@ -174,6 +173,8 @@ else:
                 use_container_width=True,
                 key=f"{key_prefix}_docx"
             )
+        
+        st.markdown("### 📄 Preview:")
         st.code(result_text, language="markdown")
 
     # TAB 1: CONTENT ASSISTANT
@@ -187,18 +188,19 @@ else:
             tone = st.selectbox("Tone & Persona", ["Professional", "Casual & Friendly", "Persuasive", "Inspirational"])
             target_audience = st.text_input("Target Audience", placeholder="e.g., Tech Founders, Students")
         
+        output_format_1 = st.radio("Export Format Option", ["PDF Document (.pdf)", "MS Word (.docx)", "On-Screen Text"], horizontal=True, key="of1")
         topic = st.text_area("Core Brief / Topic", placeholder="Describe key talking points...")
         submit_btn = st.button("🚀 Generate Content", key="tab1_btn")
 
         if submit_btn:
             if not topic or not target_audience:
-                st.warning("⚠️ Please complete all required fields.")
+                st.warning("⚠️ Please complete required fields.")
             else:
                 try:
-                    prompt = f"Platform: {platform}\nType: {content_type}\nTone: {tone}\nAudience: {target_audience}\nTopic: {topic}"
-                    with st.spinner("Processing in under 30 seconds..."):
+                    prompt = f"Platform: {platform}\nType: {content_type}\nTone: {tone}\nAudience: {target_audience}\nTopic: {topic}\nFormat as structured document."
+                    with st.spinner("Processing..."):
                         res_text = call_gemini_ai(prompt)
-                    render_output_section(res_text, f"{platform}_Content", "tab1")
+                    render_output_section(res_text, f"{platform}_Content", output_format_1, "tab1")
                 except Exception as e:
                     st.error(f"Execution Error: {e}")
 
@@ -207,6 +209,7 @@ else:
         st.subheader("🌐 Global Multi-Language Translator")
         languages_50 = ["English", "Urdu", "Arabic", "Hindi", "Pashto", "Punjabi", "Sindhi", "Spanish", "French", "German", "Chinese"]
         target_language = st.selectbox("Select Target Language", languages_50)
+        output_format_2 = st.radio("Export Format Option", ["PDF Document (.pdf)", "MS Word (.docx)", "On-Screen Text"], horizontal=True, key="of2")
         input_text = st.text_area("Source Text", placeholder="Paste source text here...", height=150)
         translate_btn = st.button("🌐 Translate Content", key="tab2_btn")
 
@@ -216,16 +219,17 @@ else:
             else:
                 try:
                     translation_prompt = f"Automatically detect source language and translate accurately to {target_language}:\n\n{input_text}"
-                    with st.spinner("Translating rapidly..."):
+                    with st.spinner("Translating..."):
                         res_text = call_gemini_ai(translation_prompt)
-                    render_output_section(res_text, f"Translation_{target_language}", "tab2")
+                    render_output_section(res_text, f"Translation_{target_language}", output_format_2, "tab2")
                 except Exception as e:
                     st.error(f"Execution Error: {e}")
 
     # TAB 3: SMART WORKSPACE
     with tab3:
         st.subheader("⚡ Smart File & Image Workspace")
-        user_prompt = st.text_area("Analysis Prompt", placeholder="e.g., mcqs 10 chahyie es file me se...", height=100)
+        output_format_3 = st.radio("Select Preferred Export File", ["PDF Document (.pdf)", "MS Word (.docx)", "On-Screen Text"], horizontal=True, key="of3")
+        user_prompt = st.text_area("Analysis Prompt", placeholder="e.g., 20 mcqs in pdf file...", height=100)
         uploaded_files = st.file_uploader(
             "Upload Documents / Images", 
             type=["png", "jpg", "jpeg", "pdf", "docx", "pptx", "txt"], 
@@ -238,7 +242,7 @@ else:
                 st.warning("⚠️ Enter instructions or upload files.")
             else:
                 try:
-                    with st.spinner("Fast Processing (<30s)..."):
+                    with st.spinner("Processing requested output..."):
                         contents = []
                         extracted_text_from_docs = ""
 
@@ -251,8 +255,7 @@ else:
                                     contents.append(Image.open(file))
                                 elif filename.endswith(".pdf"):
                                     pdf_reader = pypdf.PdfReader(file)
-                                    # Optimizing text extraction for speed
-                                    pdf_text = "\n".join([page.extract_text() or "" for page in pdf_reader.pages[:20]])
+                                    pdf_text = "\n".join([page.extract_text() or "" for page in pdf_reader.pages[:25]])
                                     extracted_text_from_docs += f"\n--- [PDF: {file.name}] ---\n{pdf_text}\n"
                                 elif filename.endswith(".docx"):
                                     doc_file = docx.Document(file)
@@ -270,15 +273,14 @@ else:
 
                         final_instruction = ""
                         if extracted_text_from_docs:
-                            # Limit total text length to ensure <30 second generation time
                             final_instruction += f"=== EXTRACTED DOCUMENTS CONTENT ===\n{extracted_text_from_docs[:15000]}\n"
                         if user_prompt.strip():
-                            final_instruction += f"=== USER INSTRUCTION ===\n{user_prompt}"
+                            final_instruction += f"=== USER INSTRUCTION ===\nFormat output properly for conversion to {output_format_3}.\n{user_prompt}"
 
                         if final_instruction: contents.append(final_instruction)
                         res_text = call_gemini_ai(contents)
 
-                    render_output_section(res_text, "Workspace_Output", "tab3")
+                    render_output_section(res_text, "Workspace_Output", output_format_3, "tab3")
                 except Exception as e:
                     st.error(f"Execution Error: {e}")
 
@@ -287,6 +289,7 @@ else:
         st.subheader("📚 Academic & Assignment Writer")
         subject_topic = st.text_input("Topic / Subject Header", placeholder="e.g., Deep Learning & Neural Networks")
         academic_level = st.selectbox("Academic Target Level", ["School Level", "High School / College", "Undergraduate", "Postgraduate / PhD"])
+        output_format_4 = st.radio("Export Assignment Format", ["PDF Document (.pdf)", "MS Word (.docx)", "On-Screen Text"], horizontal=True, key="of4")
         assign_submit = st.button("✨ Generate Assignment", key="tab4_btn")
 
         if assign_submit:
@@ -294,10 +297,10 @@ else:
                 st.warning("⚠️ Topic is required.")
             else:
                 try:
-                    prompt = f"Write a structured, concise academic paper on '{subject_topic}' for {academic_level} level."
-                    with st.spinner("Processing in under 30 seconds..."):
+                    prompt = f"Write a structured academic paper on '{subject_topic}' for {academic_level} level."
+                    with st.spinner("Generating academic assignment..."):
                         res_text = call_gemini_ai(prompt)
-                    render_output_section(res_text, f"{subject_topic}_Assignment", "tab4")
+                    render_output_section(res_text, f"{subject_topic}_Assignment", output_format_4, "tab4")
                 except Exception as e:
                     st.error(f"Execution Error: {e}")
 
@@ -308,7 +311,7 @@ else:
 
         with doc_sub_tab1:
             doc_topic = st.text_input("Document Topic", placeholder="e.g., Fundamentals of Cybersecurity")
-            export_format = st.selectbox("Format Structure", ["MS Word (.docx)", "PowerPoint Presentation (.pptx)", "PDF Document (.pdf)"])
+            export_format = st.selectbox("Format Structure", ["MS Word (.docx)", "PDF Document (.pdf)", "PowerPoint Presentation (.pptx)"])
             doc_length = st.selectbox("Scope", ["Detailed Notes (~500 words)", "Full Chapter (~1500 words)", "Full Manual (~3000+ words)"])
             custom_prompt = st.text_area("Specific Outline (Optional)")
 
@@ -319,10 +322,10 @@ else:
                     st.warning("⚠️ Topic required.")
                 else:
                     try:
-                        with st.spinner("Drafting document rapidly..."):
-                            gen_prompt = f"Create a structured document on '{doc_topic}' with format target {export_format} and length {doc_length}."
+                        with st.spinner("Building document..."):
+                            gen_prompt = f"Create a structured document on '{doc_topic}' with length {doc_length}."
                             generated_text = call_gemini_ai(gen_prompt)
-                        render_output_section(generated_text, f"{doc_topic}_Document", "tab5_1")
+                        render_output_section(generated_text, f"{doc_topic}_Document", export_format, "tab5_1")
                     except Exception as e:
                         st.error(f"Execution Error: {e}")
 
@@ -330,6 +333,7 @@ else:
             uploaded_docs = st.file_uploader("Upload Course Material (PDF, Word, PPT, TXT)", type=["pdf", "docx", "pptx", "txt"], accept_multiple_files=True)
             mcq_count = st.selectbox("Question Volume", ["10 MCQs", "20 MCQs", "30 MCQs", "50 MCQs", "100 MCQs"])
             task_type = st.selectbox("Extraction Goal", ["Generate MCQs with Answer Key", "Summarize Key Concepts", "Extract Formulas"])
+            output_format_5 = st.radio("Export File Option", ["PDF Document (.pdf)", "MS Word (.docx)", "On-Screen Text"], horizontal=True, key="of5")
 
             process_upload_btn = st.button("🚀 Process & Extract", key="tab5_sub2_btn")
 
@@ -338,13 +342,13 @@ else:
                     st.warning("⚠️ Upload files first.")
                 else:
                     try:
-                        with st.spinner("Extracting in under 30 seconds..."):
+                        with st.spinner("Extracting content..."):
                             extracted_full_text = ""
                             for file in uploaded_docs:
                                 extracted_full_text += f"\n--- FILE: {file.name} ---\n"
                                 if file.name.endswith(".pdf"):
                                     pdf_reader = pypdf.PdfReader(file)
-                                    for page in pdf_reader.pages[:20]: extracted_full_text += (page.extract_text() or "") + "\n"
+                                    for page in pdf_reader.pages[:25]: extracted_full_text += (page.extract_text() or "") + "\n"
                                 elif file.name.endswith(".docx"):
                                     doc = docx.Document(file)
                                     for p in doc.paragraphs: extracted_full_text += p.text + "\n"
@@ -359,6 +363,6 @@ else:
                             mcq_prompt = f"Task: {task_type}\nQuantity: {mcq_count}\nSource Text:\n{extracted_full_text[:15000]}"
                             output_text = call_gemini_ai(mcq_prompt)
 
-                        render_output_section(output_text, "Extracted_MCQs", "tab5_2")
+                        render_output_section(output_text, "Extracted_MCQs", output_format_5, "tab5_2")
                     except Exception as e:
                         st.error(f"Execution Error: {e}")
