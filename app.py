@@ -47,11 +47,11 @@ st.markdown("""
 st.markdown("""
     <div class="header-box">
         <div class="main-title">⚡ AI Multi-Tool Studio</div>
-        <div class="sub-title">All-in-One AI Suite | PDF & MS Word Export Fixed</div>
+        <div class="sub-title">All-in-One AI Suite | Robust Multi-Model Engine</div>
     </div>
 """, unsafe_allow_html=True)
 
-# PDF Generator Helper (FIXED: Explicitly converts bytearray to bytes)
+# PDF Generator Helper
 def generate_pdf_bytes(title, text_content):
     pdf = FPDF()
     pdf.add_page()
@@ -59,12 +59,8 @@ def generate_pdf_bytes(title, text_content):
     pdf.cell(0, 10, title.encode('latin-1', 'replace').decode('latin-1'), ln=True)
     pdf.set_font("Arial", size=10)
     pdf.ln(5)
-    
-    # Split content into lines to prevent overflow
     clean_text = text_content.encode('latin-1', 'replace').decode('latin-1')
     pdf.multi_cell(0, 7, clean_text)
-    
-    # Convert bytearray to standard bytes
     return bytes(pdf.output())
 
 # Word Generator Helper
@@ -77,17 +73,28 @@ def generate_docx_bytes(title, text_content):
     doc.save(bio)
     return bio.getvalue()
 
-# Direct High-Speed Gemini API Call
+# Smart Auto-Fallback API Execution (Permanently prevents 404 errors)
 def call_gemini_ai(contents):
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        generation_config=genai.GenerationConfig(
-            max_output_tokens=2048,
-            temperature=0.7
-        )
-    )
-    response = model.generate_content(contents)
-    return response.text
+    # Sequential fallback models if any version/region endpoint fails
+    candidate_models = [
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-2.0-flash",
+        "gemini-pro"
+    ]
+    
+    last_exception = None
+    for model_name in candidate_models:
+        try:
+            model = genai.GenerativeModel(model_name=model_name)
+            response = model.generate_content(contents)
+            if response and response.text:
+                return response.text
+        except Exception as e:
+            last_exception = e
+            continue  # Try next model automatically
+
+    raise Exception(f"API Execution Failed across all models: {last_exception}")
 
 # Check API Key
 api_key = st.secrets.get("GEMINI_API_KEY")
@@ -98,7 +105,7 @@ else:
     genai.configure(api_key=api_key)
 
     st.sidebar.markdown("### ⚙️ System Status")
-    st.sidebar.success("⚡ **PDF Export Engine Fixed**")
+    st.sidebar.success("⚡ **Multi-Model Dynamic Fallback Active**")
     st.sidebar.markdown("---")
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -324,7 +331,7 @@ else:
                                         for shape in slide.shapes:
                                             if hasattr(shape, "text"): extracted_full_text += shape.text + "\n"
                                 elif file.name.endswith(".txt"):
-                                    extracted_full_text += file.read().decode("utf-8", errors="ignore")
+                                    extracted_text_from_docs += file.read().decode("utf-8", errors="ignore")
 
                             mcq_prompt = f"Task: {task_type}\nQuantity: {mcq_count}\nSource Text:\n{extracted_full_text[:10000]}"
                             output_text = call_gemini_ai(mcq_prompt)
